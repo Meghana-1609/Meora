@@ -30,7 +30,7 @@ export function record(opts: { onLevel?: (v: number) => void; maxMs?: number; si
         const level = Math.min(1, Math.sqrt(sum / buf.length) * 6);
         opts.onLevel?.(level);
         const now = Date.now();
-        if (level > 0.12) { spoke = true; quietSince = now; }
+        if (level > 0.08) { spoke = true; quietSince = now; }
         if ((spoke && now - quietSince > (opts.silenceMs ?? 1800)) || (!spoke && now - started > 9000) || now - started > (opts.maxMs ?? 60000)) { stopFn(); return; }
         raf = requestAnimationFrame(tick);
       };
@@ -40,7 +40,8 @@ export function record(opts: { onLevel?: (v: number) => void; maxMs?: number; si
     mr.onstop = () => {
       cancelAnimationFrame(raf); stream.getTracks().forEach((t) => t.stop()); ctx?.close().catch(() => {});
       const blob = new Blob(parts, { type: mr.mimeType || "audio/webm" });
-      resolve(blob.size > 400 ? blob : new Blob([], { type: blob.type }));
+      // Nothing loud enough to be speech → don't send it (AI can invent words for silence).
+      resolve(blob.size > 400 && spoke ? blob : new Blob([], { type: blob.type }));
     };
     stopFn = () => { if (mr.state === "recording") mr.stop(); };
     mr.start(250);
@@ -52,4 +53,28 @@ export async function blobToBase64(b: Blob): Promise<string> {
   const buf = new Uint8Array(await b.arrayBuffer());
   let s = ""; for (let i = 0; i < buf.length; i += 0x8000) s += String.fromCharCode(...buf.subarray(i, i + 0x8000));
   return btoa(s);
+}
+
+/**
+ * Turns a phone recording (often WebM/Opus, which Google's AI may refuse) into a small
+ * 16 kHz mono WAV, a format every speech service accepts. Falls back to the original.
+ */
+export async function toWav(b: Blob, maxSeconds = 60): Promise<Blob> {
+  try {
+    const AC = (window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext);
+    const ctx = new AC();
+    const audio = await ctx.decodeAudioData(await b.arrayBuffer());
+    void ctx.close().catch(() => {});
+    const rate = 16000, len = Math.min(Math.ceil(audio.duration * rate), maxSeconds * rate);
+    const off = new OfflineAudioContext(1, Math.max(1, len), rate);
+    const src = off.createBufferSource(); src.buffer = audio; src.connect(off.destination); src.start();
+    const pcm = (await off.startRendering()).getChannelData(0);
+    const buf = new ArrayBuffer(44 + pcm.length * 2), v = new DataView(buf);
+    const str = (o: number, t: string) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+    str(0, "RIFF"); v.setUint32(4, 36 + pcm.length * 2, true); str(8, "WAVE"); str(12, "fmt ");
+    v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, rate, true);
+    v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); str(36, "data"); v.setUint32(40, pcm.length * 2, true);
+    for (let i = 0; i < pcm.length; i++) { const x = Math.max(-1, Math.min(1, pcm[i])); v.setInt16(44 + i * 2, x < 0 ? x * 0x8000 : x * 0x7fff, true); }
+    return new Blob([buf], { type: "audio/wav" });
+  } catch { return b; }
 }

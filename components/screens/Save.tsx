@@ -17,6 +17,14 @@ import type { BlobRef, NoteData, Remind, Repeat, TopicId } from "@/lib/types";
 
 type Phase = "capture" | "check" | "blocked" | "saved";
 
+/** True when most words of `a` still appear in `b` (so an English copy made from `a` still fits `b`). */
+function sameWords(a: string, b: string) {
+  const w = (x: string) => x.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((y) => y.length > 1);
+  const A = w(a), B = new Set(w(b));
+  if (!A.length) return false;
+  return A.filter((x) => B.has(x)).length / A.length >= 0.5;
+}
+
 export function Save({ topic: topic0, about: about0, answers, edit, mode }: { topic?: TopicId; about?: string; answers?: string; edit?: string; mode?: "type" | "photo" | "voice" }) {
   const st = useApp((s) => s);
   const old = edit ? st.notes[edit] : undefined;
@@ -26,6 +34,11 @@ export function Save({ topic: topic0, about: about0, answers, edit, mode }: { to
   const [phase, setPhase] = useState<Phase>(old ? "check" : "capture");
   const [text, setText] = useState(old?.data.text ?? "");
   const [en, setEn] = useState(old?.data.en ?? "");
+  // The English copy belongs to the words it was made from. If those words are replaced
+  // (for example you speak, then type something else), the old English copy is dropped.
+  const [heard, setHeard] = useState(old?.data.en ? old.data.text : "");
+  useEffect(() => { if (en && !sameWords(heard, text)) { setEn(""); setHeard(""); } }, [text]); // eslint-disable-line react-hooks/exhaustive-deps
+  const setEnByHand = (v: string) => { setEn(v); setHeard(text); };
   const [srcLang, setSrcLang] = useState(old?.data.lang ?? "");
   const [interim, setInterim] = useState("");
   const [rec, setRec] = useState(false);
@@ -54,8 +67,9 @@ export function Save({ topic: topic0, about: about0, answers, edit, mode }: { to
         try {
           const u = await understand(blob);
           if (!u.text) { toast(t("mic_trouble")); return; }
-          setText((base ? base + " " : "") + u.text);
-          setEn((prev) => (u.english && u.english !== u.text ? (base && prev ? prev + " " : "") + u.english : prev));
+          const said = (base ? base + " " : "") + u.text;
+          const english = u.english && u.english !== u.text ? (base && en && sameWords(heard, base) ? en + " " : "") + u.english : "";
+          setHeard(english ? said : ""); setEn(english); setText(said);
           setSrcLang(u.lang);
           track("smart_heard:" + (u.lang || "x").slice(0, 5));
         } catch {
@@ -85,7 +99,7 @@ export function Save({ topic: topic0, about: about0, answers, edit, mode }: { to
   if (phase === "blocked") return <Blocked kind={secretKind} onFix={() => { setText(""); setEn(""); setPhase("capture"); setTyping(true); }} />;
   if (phase === "saved" && savedId) return <Saved id={savedId} onAnother={() => { setText(""); setEn(""); setPhoto(null); setVoice(null); setSavedId(null); setPhase("capture"); }} />;
   if (phase === "check") return (
-    <Check old={old?.data} oldVis={old?.vis ?? null} id={edit} text={text} setText={setText} en={en} setEn={setEn} srcLang={srcLang} topic0={topic0} about0={about0} photo={photo} voice={voice} question={question?.data.text}
+    <Check old={old?.data} oldVis={old?.vis ?? null} id={edit} text={text} setText={setText} en={en} setEn={setEnByHand} srcLang={srcLang} topic0={topic0} about0={about0} photo={photo} voice={voice} question={question?.data.text}
       onBack={() => (old ? nav.back() : setPhase("capture"))}
       onBlocked={(k) => { setSecretKind(k); setText(""); setEn(""); setPhase("blocked"); }}
       onSaved={(id) => { setSavedId(id); setPhase("saved"); }}

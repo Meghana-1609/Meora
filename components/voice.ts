@@ -3,7 +3,7 @@
 // Voice in: records and lets Gemini understand any language, even Telugu and English mixed.
 import { aiCall, getState } from "./store";
 import { say, hush, scriptLang } from "@/lib/speech";
-import { canRecord, blobToBase64 } from "@/lib/recorder";
+import { canRecord, blobToBase64, toWav } from "@/lib/recorder";
 
 export const smartReady = () => { const s = getState(); return s.ai && s.settings.smartOn && canRecord(); };
 
@@ -40,5 +40,6 @@ export async function speakNatural(text: string, lang?: string) {
 
 export async function understand(blob: Blob): Promise<{ text: string; english: string; lang: string }> {
   const s = getState();
-  return aiCall({ task: "transcribe", audio: await blobToBase64(blob), mime: blob.type || "audio/webm", lang: s.settings.lang });
+  const wav = await toWav(blob);
+  return aiCall({ task: "transcribe", audio: await blobToBase64(wav), mime: wav.type || "audio/webm", lang: s.settings.lang });
 }

@@ -1,6 +1,7 @@
 // Optional: Google's free Gemini tier, for asking across languages and translating.
 // Off unless GEMINI_API_KEY is set on the server AND the family turns on "Smart answers".
 import { HttpError } from "./store";
+import { serverError } from "./events";
 
 export const aiReady = () => !!process.env.GEMINI_API_KEY;
 
@@ -16,7 +17,11 @@ async function callModels(models: string[], body: (model: string) => unknown, ke
       method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": key },
       body: JSON.stringify(body(model)), signal: AbortSignal.timeout(timeout),
     });
-    if (r.ok || r.status === 429) return r;
+    if (r.ok) return r;
+    // Show Google's exact reason on the admin page (no keys or notes are included).
+    const why = await r.clone().text().then((t) => { try { return JSON.parse(t)?.error?.message ?? t; } catch { return t; } }).catch(() => "");
+    void serverError(`gemini ${model} ${r.status}: ${String(why).replace(/key=[^\s&]+/g, "key=…").slice(0, 150)}`);
+    if (r.status === 429) return r;
     last = r;
     if (![400, 403, 404].includes(r.status)) break; // only move on when this model is unknown or unavailable
   }
@@ -58,14 +63,15 @@ export async function aiTranslate(text: string, to: string) {
 
 /** Hears any language (even Telugu and English mixed) and also gives clear English. */
 export async function aiTranscribe(audio: string, mime: string, hint: string) {
-  if (!audio || audio.length > 3_000_000 || !/^audio\/[\w.+-]+/.test(mime)) throw new HttpError(400, "Bad audio.");
+  if (!audio || audio.length > 3_400_000 || !/^audio\/[\w.+-]+/.test(mime)) throw new HttpError(400, "Bad audio.");
   const out = await gemini(`Listen to this voice note from a family member. It may be in any language, often Telugu, Hindi or Tamil mixed with English words.
 1) "text": write exactly what was said, in the speaker's own language and script (Telugu words in Telugu script, English words in English). Remove repeated words, "umm", false starts.
 2) "english": the same meaning in short, natural, correct English.
 3) "lang": the main language code (like "te", "hi", "en").
-If nothing was said, return empty strings. The person's app language is "${hint}".
+Only write words you clearly hear. Never guess, invent or complete sentences. If there is no clear speech (silence, noise, music, TV), return empty strings. The person's app language is "${hint}".
 Return JSON {"text": string, "english": string, "lang": string}.`, [{ inline_data: { mime_type: mime.split(";")[0], data: audio } }]);
-  return { text: String(out.text ?? "").trim(), english: String(out.english ?? "").trim(), lang: String(out.lang ?? "").slice(0, 8) };
+  const text = String(out.text ?? "").trim();
+  return { text, english: text ? String(out.english ?? "").trim() : "", lang: String(out.lang ?? "").slice(0, 8) };
 }
 
 /** A natural, human-sounding voice (Gemini text-to-speech). Returns a WAV file as base64. */
