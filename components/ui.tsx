@@ -113,7 +113,7 @@ export function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boo
 }
 
 export function Page({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <main className={`fade mx-auto flex min-h-dvh w-full max-w-[34rem] flex-col px-4 pt-[max(1rem,env(safe-area-inset-top))] safe-b ${className}`}>{children}</main>;
+  return <main className={`page fade mx-auto flex min-h-dvh w-full max-w-[34rem] flex-col px-4 pt-[max(1rem,env(safe-area-inset-top))] safe-b ${className}`}>{children}</main>;
 }
 
 /** A gentle "are you sure?" box. Never a scary browser popup. */

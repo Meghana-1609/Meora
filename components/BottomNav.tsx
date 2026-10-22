@@ -21,7 +21,7 @@ export function BottomNav({ at }: { at: Route["s"] }) {
     );
   };
   return (
-    <nav className="no-print fixed inset-x-0 bottom-0 z-30 border-t border-line bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur" aria-label="Main">
+    <nav className="no-print fixed inset-x-0 bottom-0 z-30 md:hidden border-t border-line bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur" aria-label="Main">
       <div className="mx-auto flex max-w-[34rem] items-stretch">
         {tab("home", "home", t("tab_home"))}
         {tab("ask", "ask", t("ask"))}

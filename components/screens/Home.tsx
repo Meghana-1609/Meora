@@ -45,24 +45,28 @@ export function Home() {
   const empty = Object.keys(notes).length === 0;
   const alone = (family?.members.length ?? 1) <= 1;
   const starters: [string, string, TopicId][] = [["s_med", "health", "health"], ["s_doc", "phone", "contacts"], ["s_where", "key", "where"], ["s_bday", "cal", "dates"]];
-  const tiles = TOPICS.filter((tp) => tp.id !== "other").slice(0, 6);
+  const tiles = TOPICS.filter((tp) => tp.id !== "other").slice(0, 8);
+  const recent = useMemo(() => Object.values(notes).sort((a, b) => b.updated - a.updated).slice(0, 3), [notes]);
 
   return (
-    <main className="fade mx-auto w-full max-w-[32rem] px-5 pt-[max(1.1rem,env(safe-area-inset-top))]">
-      <header className="flex items-center justify-between gap-3">
-        <span className="flex min-w-0 items-center gap-2.5"><Logo size={32} /><span className="min-w-0 leading-none"><b className="block truncate text-[.95rem] font-semibold tracking-[0.14em]">MEORA</b><span className="mt-1 block truncate text-[.74rem] text-soft">{t("tag")}</span></span></span>
-        <LangPill />
+    <main className="fade mx-auto w-full max-w-[32rem] px-5 pt-[max(1.1rem,env(safe-area-inset-top))] md:max-w-[64rem] md:px-8 md:pt-8 lg:px-11">
+      {/* Phone: logo + language on top, greeting below. Tablet/computer: greeting on the left, language on the right. */}
+      <header className="grid grid-cols-[1fr_auto] items-center gap-x-3">
+        <span className="flex min-w-0 items-center gap-2.5 md:hidden"><Logo size={32} /><span className="min-w-0 leading-none"><b className="block truncate text-[.95rem] font-semibold tracking-[0.14em]">MEORA</b><span className="mt-1 block truncate text-[.74rem] text-soft">{t("tag")}</span></span></span>
+        <span className="col-start-2 row-start-1 md:row-span-2 md:self-center"><LangPill /></span>
+        <p className="col-span-2 mt-6 text-[0.86rem] text-soft md:col-span-1 md:col-start-1 md:row-start-1 md:mt-0 md:text-[.95rem]">{today}</p>
+        <h1 className="col-span-2 mt-0.5 text-[1.35rem] font-semibold leading-tight tracking-[-.01em] md:col-span-1 md:col-start-1 md:row-start-2 md:text-[1.9rem]">{hello}</h1>
       </header>
       {(!online || outbox > 0) && <p className="mt-3 rounded-[.8rem] bg-brass-soft px-3.5 py-2 text-[.88rem] font-medium">{!online ? t("offline") : t("sending", { n: outbox })}</p>}
 
-      <p className="mt-6 text-[0.86rem] text-soft">{today}</p>
-      <h1 className="mt-0.5 text-[1.35rem] font-semibold leading-tight tracking-[-.01em]">{hello}</h1>
-
-      <button onClick={() => nav.push({ s: "ask" })} className="tap mt-4 flex w-full items-center gap-3 rounded-[1rem] bg-navy py-1.5 pe-1.5 ps-4 text-start text-paper shadow-[0_12px_26px_-18px_rgb(19_26_48/.9)]">
+      <button onClick={() => nav.push({ s: "ask" })} className="tap mt-4 flex w-full items-center gap-3 rounded-[1rem] bg-navy py-1.5 pe-1.5 ps-4 text-start text-paper shadow-[0_12px_26px_-18px_rgb(19_26_48/.9)] md:mt-5 md:rounded-[1.15rem] md:py-2 md:pe-2 md:ps-5">
         <Icon name="ask" size={18} className="opacity-70" />
         <span className="flex-1 text-[1rem] opacity-80">{t("ask_bar")}</span>
         <span className="grid h-10 w-10 place-items-center rounded-[.75rem] bg-white/12"><Icon name="mic" size={19} /></span>
       </button>
+
+      <div className={s.simple ? "" : "md:grid md:grid-cols-2 md:items-start md:gap-x-8"}>
+      <div className="min-w-0">
 
       {requests.length > 0 && (
         <>
@@ -110,19 +114,32 @@ export function Home() {
         </>
       )}
 
+      {/* Bigger screens have room for the latest notes too. */}
+      {!empty && recent.length > 0 && (
+        <div className="hidden md:block">
+          <Label>{t("recent")}</Label>
+          <Group>{recent.map((n) => {
+            const tp = TOPICS.find((x) => x.id === n.data.topic) ?? TOPICS[TOPICS.length - 1];
+            return <Row key={n.id} icon={tp.icon} tint={tp.bg} fg={tp.fg} title={<span className="line-clamp-1">{short(n.data.en || n.data.text, 60)}</span>} sub={family?.members.find((m) => m.id === n.by)?.name} onClick={() => nav.push({ s: "note", id: n.id })} />;
+          })}</Group>
+        </div>
+      )}
+      </div>
+
       {!s.simple && (
-        <>
+        <div className="min-w-0">
           <Label action={t("all")} onAction={() => nav.push({ s: "topics" })}>{t("topics")}</Label>
-          <div className="topics grid grid-cols-2 gap-2">
-            {tiles.map((tp) => (
-              <button key={tp.id} onClick={() => nav.push({ s: "topic", id: tp.id })} className="tile tap flex h-[4.4rem] flex-col justify-between rounded-[1rem] p-3 text-start" style={{ background: tp.bg }}>
+          <div className="topics grid grid-cols-2 gap-2 md:gap-2.5">
+            {tiles.map((tp, i) => (
+              <button key={tp.id} onClick={() => nav.push({ s: "topic", id: tp.id })} className={`tile tap h-[4.4rem] flex-col justify-between rounded-[1rem] p-3 text-start md:h-[5.4rem] md:p-3.5 ${i >= 6 ? "hidden md:flex" : "flex"}`} style={{ background: tp.bg }}>
                 <span className="flex items-center justify-between"><Icon name={tp.icon} size={17} style={{ color: tp.fg }} />{counts[tp.id] ? <span className="text-[0.78rem] opacity-60">{counts[tp.id]}</span> : null}</span>
                 <span className="text-[0.93rem] font-medium leading-tight">{t("t_" + tp.id)}</span>
               </button>
             ))}
           </div>
-        </>
+        </div>
       )}
+      </div>
       <div className="h-8" />
     </main>
   );

@@ -50,9 +50,9 @@ export function Help({ nav }: { nav: boolean }) {
         <Icon name="help" size={21} />
       </button>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30" onClick={() => setOpen(false)}>
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 md:justify-end md:p-6" onClick={() => setOpen(false)}>
           <div role="dialog" aria-label={t("help_title")} onClick={(e) => e.stopPropagation()}
-            className="flex max-h-[82dvh] w-full max-w-[34rem] flex-col rounded-t-[1.4rem] bg-paper pb-[env(safe-area-inset-bottom)]">
+            className="flex max-h-[82dvh] w-full max-w-[34rem] flex-col rounded-t-[1.4rem] bg-paper pb-[env(safe-area-inset-bottom)] md:max-h-[72dvh] md:max-w-[26rem] md:rounded-[1.4rem] md:shadow-2xl">
             <div className="flex items-center gap-3 border-b border-line px-5 py-3.5">
               <span className="grid h-9 w-9 place-items-center rounded-full bg-navy text-paper"><Icon name="help" size={18} /></span>
               <div className="min-w-0 flex-1"><p className="text-[1rem] font-semibold">{t("help_title")}</p><p className="text-[.8rem] text-soft">{t("help_sub")}</p></div>

@@ -19,6 +19,7 @@ import { Privacy, Settings, Tour } from "./screens/Settings";
 import { More } from "./screens/More";
 import { AllTopics } from "./screens/Topics";
 import { BottomNav } from "./BottomNav";
+import { SideNav } from "./SideNav";
 import { Help } from "./Help";
 
 export function App() {
@@ -67,9 +68,11 @@ function Main() {
   useEffect(() => { if (!toured) nav.push({ s: "tour" }); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const noNav = ["save", "lang", "tour", "recovery"].includes(r.s);
   const help = !["save", "tour", "recovery"].includes(r.s);
+  // Save and Language keep the side menu on tablets and computers (on phones they are full screen).
+  const side = r.s === "save" || r.s === "lang";
   return noNav
-    ? <>{<Screen r={r} />}{help && <Help nav={false} />}</>
-    : <div className="with-nav"><Screen r={r} /><Help nav /><BottomNav at={r.s} /></div>;
+    ? <div className={side ? "side-only" : ""}><Screen r={r} />{help && <Help nav={false} />}{side && <SideNav at={r.s} />}</div>
+    : <div className="with-nav"><Screen r={r} /><Help nav /><BottomNav at={r.s} /><SideNav at={r.s} /></div>;
 }
 
 function Screen({ r }: { r: ReturnType<typeof useRoute> }) {

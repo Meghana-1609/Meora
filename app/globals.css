@@ -90,3 +90,16 @@ html.dark .tile { background: var(--color-card) !important; box-shadow: 0 0 0 1p
   .mwave i { animation: none; }
   .intro .tile, .intro .roof, .intro .dot, .intro .word, .intro .itag, .intro .glow { animation: none; opacity: 1; transform: none; stroke-dashoffset: 0; }
 }
+
+/* Tablets and computers: side menu instead of bottom tabs; pages use the wider screen. */
+@media (min-width: 768px) {
+  .with-nav, .side-only { padding-bottom: 0; padding-inline-start: 6rem; }
+  .with-nav main { min-height: 100dvh !important; }
+  .with-nav main.page, .side-only main.page { max-width: 46rem; padding-inline: 2rem; padding-top: max(2rem, env(safe-area-inset-top)); }
+  [data-help] { bottom: 1.5rem !important; right: 1.5rem !important; }
+  [dir="rtl"] [data-help] { right: auto !important; left: 1.5rem !important; }
+}
+@media (min-width: 1024px) {
+  .with-nav, .side-only { padding-inline-start: 16rem; }
+  .with-nav main.page, .side-only main.page { max-width: 54rem; padding-inline: 2.75rem; }
+}

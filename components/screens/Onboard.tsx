@@ -173,7 +173,7 @@ export function Welcome() {
 function Dark({ children }: { children: ReactNode }) {
   return (
     <main className="fade flex min-h-dvh flex-col bg-[#1D2742] text-[#F3F1EC]">
-      <div className="mx-auto flex w-full max-w-[34rem] flex-1 flex-col px-5 pb-[max(1.6rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
+      <div className="mx-auto flex w-full max-w-[34rem] flex-1 flex-col px-5 pb-[max(1.6rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] md:max-w-[40rem] md:pb-10 md:pt-8">
         <div className="flex items-center justify-between">
           <span className="flex items-center gap-2.5"><Logo size={32} flat /><span className="text-[.9rem] font-semibold tracking-[.22em]">MEORA</span></span>
           <LangPill dark />
