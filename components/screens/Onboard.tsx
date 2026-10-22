@@ -139,6 +139,7 @@ export function Welcome() {
         <LangPill />
       </div>
       <div className="mt-14"><Logo size={84} /></div>
+<p className="mt-5 text-[.8rem] font-semibold uppercase tracking-[0.16em] text-navy">{t("tag")}</p>
       <h1 className="mt-7 text-[1.72rem] font-semibold leading-[1.1]">{t("welcome_title")}</h1>
       <p className="mt-4 text-[1rem] leading-relaxed text-soft">{t("welcome_sub")}</p>
       <div className="mt-auto grid gap-3 pt-10">

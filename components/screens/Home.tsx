@@ -48,7 +48,7 @@ export function Home() {
   return (
     <main className="fade mx-auto w-full max-w-[32rem] px-5 pt-[max(1.1rem,env(safe-area-inset-top))]">
       <header className="flex items-center justify-between gap-3">
-        <span className="flex min-w-0 items-center gap-2.5"><Logo size={30} /><b className="truncate text-[.95rem] font-semibold tracking-[0.14em]">MEORA</b></span>
+        <span className="flex min-w-0 items-center gap-2.5"><Logo size={32} /><span className="min-w-0 leading-none"><b className="block truncate text-[.95rem] font-semibold tracking-[0.14em]">MEORA</b><span className="mt-1 block truncate text-[.74rem] text-soft">{t("tag")}</span></span></span>
         <LangPill />
       </header>
       {(!online || outbox > 0) && <p className="mt-3 rounded-[.8rem] bg-brass-soft px-3.5 py-2 text-[.88rem] font-medium">{!online ? t("offline") : t("sending", { n: outbox })}</p>}
