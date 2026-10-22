@@ -23,8 +23,12 @@ export function track(name: string, n = 1) {
   q[name] = (q[name] ?? 0) + n;
   if (!timer) timer = setTimeout(flush, 4000);
 }
+const seenErr = new Set<string>();
 export function trackError(msg: string) {
-  if (errs.length < 5) errs.push(msg.slice(0, 200));
+  const m = msg.slice(0, 200);
+  if (seenErr.has(m) || seenErr.size >= 10) return;
+  seenErr.add(m);
+  if (errs.length < 5) errs.push(m);
   if (!timer) timer = setTimeout(flush, 4000);
 }
 let started = false;

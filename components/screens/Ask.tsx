@@ -87,7 +87,7 @@ export function Ask({ q: q0 }: { q?: string }) {
     stopRef.current = listen(getState().settings.speech, {
       text: (f, i) => { setQ(f); qRef.current = f; setInterim(i); },
       end: () => { setRec(false); setInterim(""); const cur = qRef.current.trim(); if (cur && cur !== lastRun.current) void run(cur); },
-      error: (e) => { setRec(false); toast(e === "not-allowed" ? t("mic_denied") : e === "unsupported" ? t("no_mic") : t("mic_trouble")); },
+      error: (e) => { setRec(false); track("mic_error:" + e.replace(/[^a-z-]/g, "").slice(0, 12)); toast(e === "not-allowed" ? t("mic_denied") : e === "unsupported" || e === "service-not-allowed" ? t("no_mic") : e === "network" ? t("need_internet") : t("mic_trouble")); },
     });
     // one question at a time: stop after a pause
   };

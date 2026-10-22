@@ -4,14 +4,14 @@ import { Icon } from "./ui";
 import { t, LANGS, MORE_SPEECH } from "./i18n";
 import { saveSettings, useApp } from "./store";
 
-const ALL: [string, string][] = [...LANGS.map((l) => [l.speech, l.name] as [string, string]), ["en-IN", "English (India)"], ...MORE_SPEECH.filter(([c]) => c !== "en-IN")];
+const ALL: [string, string][] = [...LANGS.map((l) => [l.speech, l.name] as [string, string]), ...MORE_SPEECH];
 export const speechName = (code: string) => ALL.find(([c]) => c === code)?.[1] ?? ALL.find(([c]) => c.split("-")[0] === code.split("-")[0])?.[1] ?? code;
 
 /** "Speaking: తెలుగు" — tap to change the language the phone listens for. */
 export function SpeechLang({ onChange }: { onChange?: () => void }) {
   const speech = useApp((s) => s.settings.speech);
   const [open, setOpen] = useState(false);
-  const quick: [string, string][] = [["te-IN", "తెలుగు"], ["en-IN", "English (India)"], ["en-US", "English (US)"], ["hi-IN", "हिन्दी"], ["ta-IN", "தமிழ்"]];
+  const quick: [string, string][] = [["en-US", "English"], ["te-IN", "తెలుగు"], ["hi-IN", "हिन्दी"], ["ta-IN", "தமிழ்"]];
   const pick = async (c: string) => { await saveSettings({ speech: c }); setOpen(false); onChange?.(); };
   return (
     <>

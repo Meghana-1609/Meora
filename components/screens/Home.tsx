@@ -1,4 +1,5 @@
 "use client";
+import { track } from "../track";
 import { useMemo } from "react";
 import { Avatar, Group, Icon, Label, Logo, Row } from "../ui";
 import { t, LOCALE } from "../i18n";
@@ -42,6 +43,7 @@ export function Home() {
   const today = now.toLocaleDateString(LOCALE(), { weekday: "long", day: "numeric", month: "long" });
   const requests = family?.requests ?? [];
   const empty = Object.keys(notes).length === 0;
+  const alone = (family?.members.length ?? 1) <= 1;
   const starters: [string, string, TopicId][] = [["s_med", "health", "health"], ["s_doc", "phone", "contacts"], ["s_where", "key", "where"], ["s_bday", "cal", "dates"]];
   const tiles = TOPICS.filter((tp) => tp.id !== "other").slice(0, 6);
 
@@ -73,6 +75,10 @@ export function Home() {
           <Label>{t("family_asked")}</Label>
           <Group><Row icon="help" tint="#F3EBDC" fg="#8F6A2E" title={open.length === 1 ? `“${open[0].data.text}”` : t("questions_waiting", { n: open.length })} sub={t("answer_it")} onClick={() => nav.push(open.length === 1 ? { s: "save", answers: open[0].id } : { s: "questions" })} /></Group>
         </>
+      )}
+
+      {alone && !empty && requests.length === 0 && (
+        <Group className="mt-4"><Row icon="users" tint="#E4E8F2" fg="#1D2742" title={t("invite_member")} sub={t("invite_nudge")} onClick={() => { track("invite_nudge"); nav.tab({ s: "family" }); }} /></Group>
       )}
 
       {empty && !s.simple ? (

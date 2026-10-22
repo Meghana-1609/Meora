@@ -15,9 +15,17 @@ export const metadata: Metadata = {
 };
 export const viewport: Viewport = { themeColor: "#1D2742", width: "device-width", initialScale: 1, viewportFit: "cover" };
 
+// "Install as app" is offered only where the browser installs it cleanly (Chrome on Android, and every
+// browser on iPhone, iPad and computers). Other Android browsers build their own app package, which some
+// phones flag with a false security warning, so there Meora is added as a normal home-screen shortcut instead.
+const INSTALL = `(function(){try{var u=navigator.userAgent,a=/Android/i.test(u);
+var other=/SamsungBrowser|EdgA|OPR|Opera|OPT\\/|YaBrowser|UCBrowser|MiuiBrowser|XiaoMi|HeyTap|OppoBrowser|VivoBrowser|HuaweiBrowser|DuckDuckGo|Firefox|FxiOS|; wv\\)|FBAN|FBAV|Instagram|Line\\/|Snapchat|GSA\\//i.test(u);
+if(!a||(/Chrome\\/\\d+/.test(u)&&!other&&!navigator.brave)){var l=document.createElement('link');l.rel='manifest';l.href='/manifest.webmanifest';document.head.appendChild(l);}}catch(e){}})();`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="t2" suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{ __html: INSTALL }} /></head>
       <body>
         {children}
         <RegisterSW />

@@ -1,6 +1,6 @@
 import type { Strings } from "./en";
 export const es: Partial<Strings> = {
-  tag: "La memoria de tu familia.",
+  tag: "Your family's brain.",
   choose_lang: "Elige tu idioma", more_langs: "Más idiomas", more_langs_note: "Las palabras de la app estarán en inglés. Puedes hablar y guardar notas en tu idioma.",
   welcome_title: "La memoria de tu familia, en un lugar seguro.", welcome_sub: "Guarda hablando. Pregunta cuando quieras. Solo tu familia puede leerlo.",
   start_family: "Crear una familia nueva", join_family: "Unirme a mi familia", free_line: "Gratis. Sin anuncios. Sin contraseña.", lost_phones: "¿Perdiste todos los teléfonos? Usa las imágenes de recuperación",
@@ -31,7 +31,7 @@ export const es: Partial<Strings> = {
   speak_now: "Habla ahora.", listening: "Escuchando…", tap_stop: "Toca otra vez al terminar", tap_to_speak: "Toca y habla",
   photo: "Foto", type: "Escribir", record_voice: "Voz", type_here: "Escribe aquí", type_example: "Ejemplo: La pastilla de la tensión de mamá es Amlong 5, una cada mañana.", speak_instead: "Hablar",
   say_what: "Ahora di o escribe qué es", saving_in: "Se guardará en {topic}", voice_note: "Nota de voz",
-  no_mic: "El dictado por voz no funciona en este navegador. Escribe o usa Chrome.", mic_denied: "Meora no te oye. Permite el micrófono o escribe.", mic_trouble: "No se oyó. Inténtalo de nuevo o escribe.",
+  no_mic: "La voz no está disponible ahora. Escribe, por favor.", mic_denied: "Meora no te oye. Permite el micrófono o escribe.", mic_trouble: "No se oyó. Inténtalo de nuevo o escribe.",
   check_save: "Revisar y guardar", you_said: "Dijiste", fix_words: "Corregir", hear_it: "Escuchar", topic: "Tema", we_guessed: "lo adivinamos", change: "Cambiar",
   about: "Sobre", add_name: "Añadir", person_name: "Nombre", who_can_see: "Quién puede verlo", everyone: "Todos", only_some: "Solo algunos", hide_from: "Ocultar a…",
   pick_who_sees: "¿Quién puede verlo?", pick_who_not: "¿Quién NO debe verlo?",
@@ -113,4 +113,5 @@ export const es: Partial<Strings> = {
   help_c3: "¿Cómo funcionan los recordatorios?",
   help_c4: "La voz no funciona",
   family_sub_1: "Solo tú por ahora · invita a tu familia abajo",
+  invite_nudge: "Meora funciona mejor con tu familia dentro.",
 };

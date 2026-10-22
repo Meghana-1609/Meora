@@ -73,7 +73,7 @@ export function Save({ topic: topic0, about: about0, answers, edit, mode }: { to
     stopRef.current = listen(getState().settings.speech, {
       text: (f, i) => { setText((base ? base + " " : "") + f); setInterim(i); },
       end: () => { setRec(false); setInterim(""); },
-      error: (e) => { track("mic_error:" + e.replace(/[^a-z-]/g, "").slice(0, 12)); setRec(false); setTyping(true); toast(e === "not-allowed" || e === "service-not-allowed" ? t("mic_denied") : e === "unsupported" ? t("no_mic") : t("mic_trouble")); },
+      error: (e) => { track("mic_error:" + e.replace(/[^a-z-]/g, "").slice(0, 12)); setRec(false); setTyping(true); toast(e === "not-allowed" ? t("mic_denied") : e === "unsupported" || e === "service-not-allowed" ? t("no_mic") : e === "network" ? t("need_internet") : t("mic_trouble")); },
     });
   };
   const stop = () => { stopRef.current(); if (!smart) { setRec(false); setInterim(""); } };

@@ -40,7 +40,7 @@ export function record(opts: { onLevel?: (v: number) => void; maxMs?: number; si
     mr.onstop = () => {
       cancelAnimationFrame(raf); stream.getTracks().forEach((t) => t.stop()); ctx?.close().catch(() => {});
       const blob = new Blob(parts, { type: mr.mimeType || "audio/webm" });
-      resolve(blob.size > 1500 ? blob : new Blob([], { type: blob.type }));
+      resolve(blob.size > 400 ? blob : new Blob([], { type: blob.type }));
     };
     stopFn = () => { if (mr.state === "recording") mr.stop(); };
     mr.start(250);

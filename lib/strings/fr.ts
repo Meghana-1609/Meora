@@ -1,6 +1,6 @@
 import type { Strings } from "./en";
 export const fr: Partial<Strings> = {
-  tag: "La mémoire de votre famille.",
+  tag: "Your family's brain.",
   choose_lang: "Choisissez votre langue", more_langs: "Plus de langues", more_langs_note: "Les mots de l'appli resteront en anglais. Vous pouvez parler et enregistrer dans votre langue.",
   welcome_title: "La mémoire de votre famille, en lieu sûr.", welcome_sub: "Enregistrez en parlant. Demandez quand vous voulez. Seule votre famille peut lire.",
   start_family: "Créer une nouvelle famille", join_family: "Rejoindre ma famille", free_line: "Gratuit. Sans pub. Sans mot de passe.", lost_phones: "Tous les téléphones perdus ? Utilisez les images de secours",
@@ -31,7 +31,7 @@ export const fr: Partial<Strings> = {
   speak_now: "Parlez maintenant.", listening: "J'écoute…", tap_stop: "Touchez encore quand vous avez fini", tap_to_speak: "Touchez et parlez",
   photo: "Photo", type: "Écrire", record_voice: "Voix", type_here: "Écrivez ici", type_example: "Ex. : Le cachet de tension de maman est Amlong 5, un chaque matin.", speak_instead: "Parler",
   say_what: "Dites ou écrivez maintenant ce que c'est", saving_in: "Enregistré dans {topic}", voice_note: "Note vocale",
-  no_mic: "La dictée ne marche pas dans ce navigateur. Écrivez ou utilisez Chrome.", mic_denied: "Meora ne vous entend pas. Autorisez le micro, ou écrivez.", mic_trouble: "Pas entendu. Réessayez ou écrivez.",
+  no_mic: "La voix n’est pas disponible pour le moment. Écrivez plutôt.", mic_denied: "Meora ne vous entend pas. Autorisez le micro, ou écrivez.", mic_trouble: "Pas entendu. Réessayez ou écrivez.",
   check_save: "Vérifier et enregistrer", you_said: "Vous avez dit", fix_words: "Corriger", hear_it: "Écouter", topic: "Sujet", we_guessed: "deviné", change: "Changer",
   about: "Concerne", add_name: "Ajouter", person_name: "Nom", who_can_see: "Qui peut voir", everyone: "Tout le monde", only_some: "Certains seulement", hide_from: "Cacher à…",
   pick_who_sees: "Qui peut voir ?", pick_who_not: "Qui NE doit PAS voir ?",
@@ -113,4 +113,5 @@ export const fr: Partial<Strings> = {
   help_c3: "Comment marchent les rappels ?",
   help_c4: "La voix ne marche pas",
   family_sub_1: "Vous seul pour l'instant · invitez votre famille ci-dessous",
+  invite_nudge: "Meora fonctionne mieux avec toute la famille.",
 };

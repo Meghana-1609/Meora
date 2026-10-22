@@ -1,6 +1,6 @@
 import type { Strings } from "./en";
 export const hi: Partial<Strings> = {
-  tag: "आपके परिवार की याददाश्त।",
+  tag: "Your family's brain.",
   choose_lang: "अपनी भाषा चुनें", more_langs: "और भाषाएँ", more_langs_note: "ऐप के शब्द अंग्रेज़ी में रहेंगे। आप अपनी भाषा में बोलकर नोट्स सेव कर सकते हैं।",
   welcome_title: "आपके परिवार की यादें, एक सुरक्षित जगह।", welcome_sub: "बोलकर सेव करें। कभी भी पूछें। सिर्फ़ आपका परिवार पढ़ सकता है।",
   start_family: "नया परिवार शुरू करें", join_family: "मेरे परिवार से जुड़ें", free_line: "मुफ़्त। कोई विज्ञापन नहीं। कोई पासवर्ड नहीं।", lost_phones: "सारे फ़ोन खो गए? रिकवरी तस्वीरें इस्तेमाल करें",
@@ -31,7 +31,7 @@ export const hi: Partial<Strings> = {
   speak_now: "अब बोलें।", listening: "सुन रहे हैं…", tap_stop: "पूरा होने पर फिर दबाएँ", tap_to_speak: "दबाएँ और बोलें",
   photo: "फ़ोटो", type: "टाइप", record_voice: "आवाज़", type_here: "यहाँ टाइप करें", type_example: "जैसे: माँ की बीपी की गोली Amlong 5, रोज़ सुबह एक।", speak_instead: "बोलकर बताएँ",
   say_what: "अब बोलें या लिखें कि यह क्या है", saving_in: "{topic} में सेव होगा", voice_note: "आवाज़ नोट",
-  no_mic: "इस ब्राउज़र में बोलकर लिखना नहीं चलता। टाइप करें या Chrome इस्तेमाल करें।", mic_denied: "Meora आपको सुन नहीं पा रहा। माइक्रोफ़ोन की अनुमति दें, या टाइप करें।", mic_trouble: "सुनाई नहीं दिया। फिर कोशिश करें या टाइप करें।",
+  no_mic: "अभी आवाज़ उपलब्ध नहीं है। कृपया टाइप करें।", mic_denied: "Meora आपको सुन नहीं पा रहा। माइक्रोफ़ोन की अनुमति दें, या टाइप करें।", mic_trouble: "सुनाई नहीं दिया। फिर कोशिश करें या टाइप करें।",
   check_save: "देखें और सेव करें", you_said: "आपने कहा", fix_words: "शब्द ठीक करें", hear_it: "सुनें", topic: "विषय", we_guessed: "हमारा अंदाज़ा", change: "बदलें",
   about: "किसके बारे में", add_name: "जोड़ें", person_name: "नाम", who_can_see: "कौन देख सकता है", everyone: "सब", only_some: "कुछ ही लोग", hide_from: "इनसे छिपाएँ…",
   pick_who_sees: "कौन देख सकता है?", pick_who_not: "किसे नहीं देखना चाहिए?",
@@ -113,4 +113,5 @@ export const hi: Partial<Strings> = {
   help_c3: "रिमाइंडर कैसे काम करते हैं?",
   help_c4: "आवाज़ काम नहीं कर रही",
   family_sub_1: "अभी सिर्फ़ आप · नीचे परिवार को बुलाएँ",
+  invite_nudge: "परिवार साथ हो तो Meora सबसे अच्छा काम करता है।",
 };

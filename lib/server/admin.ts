@@ -56,7 +56,7 @@ export async function stats() {
   const activity = {
     today: sum(29), week: sum(23), month: sum(0),
     devices: { today: usage[29].devices, week: Math.max(...usage.slice(23).map((d) => d.devices)), perDay: usage.map((d) => d.devices) },
-    errors: usage.flatMap((d) => d.errors).sort((a, b) => b.at - a.at).slice(0, 20),
+    errors: groupErrors(usage.flatMap((d) => d.errors)),
   };
   return {
     activity,
@@ -70,4 +70,11 @@ export async function stats() {
     week: { families: fams.filter((f) => f.created > now - 7 * DAY).length, people: members.filter((m) => m.joined > now - 7 * DAY).length },
     days, sizes, events,
   };
+}
+
+/** Same problem many times → one line: "message (×12)", newest first. */
+function groupErrors(list: { at: number; msg: string }[]) {
+  const m = new Map<string, { at: number; msg: string; n: number }>();
+  for (const e of list) { const g = m.get(e.msg); if (g) { g.n++; g.at = Math.max(g.at, e.at); } else m.set(e.msg, { ...e, n: 1 }); }
+  return [...m.values()].sort((a, b) => b.at - a.at).slice(0, 20).map((g) => ({ at: g.at, msg: g.n > 1 ? `${g.msg} (×${g.n})` : g.msg }));
 }

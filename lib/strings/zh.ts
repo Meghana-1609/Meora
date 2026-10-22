@@ -1,6 +1,6 @@
 import type { Strings } from "./en";
 export const zh: Partial<Strings> = {
-  tag: "你家的记忆。",
+  tag: "Your family's brain.",
   choose_lang: "选择你的语言", more_langs: "更多语言", more_langs_note: "应用文字将显示为英文。你可以用自己的语言说话并保存笔记。",
   welcome_title: "全家人的记忆，放在一个安全的地方。", welcome_sub: "说话就能保存。随时提问。只有你的家人能看。",
   start_family: "创建新家庭", join_family: "加入我的家庭", free_line: "免费。无广告。无需密码。", lost_phones: "所有手机都丢了？使用恢复图片",
@@ -31,7 +31,7 @@ export const zh: Partial<Strings> = {
   speak_now: "现在说吧。", listening: "正在听…", tap_stop: "说完后再点一下", tap_to_speak: "点按并说话",
   photo: "照片", type: "打字", record_voice: "语音", type_here: "在这里输入", type_example: "例如：妈妈的降压药是 Amlong 5，每天早上一片。", speak_instead: "改为说话",
   say_what: "现在说出或写下这是什么", saving_in: "将保存到{topic}", voice_note: "语音笔记",
-  no_mic: "这个浏览器不支持语音输入。请打字，或使用 Chrome。", mic_denied: "Meora 听不到你。请允许使用麦克风，或打字。", mic_trouble: "没听清。请再试一次或打字。",
+  no_mic: "语音暂时不可用，请改为打字。", mic_denied: "Meora 听不到你。请允许使用麦克风，或打字。", mic_trouble: "没听清。请再试一次或打字。",
   check_save: "检查并保存", you_said: "你说的", fix_words: "修改文字", hear_it: "听一听", topic: "主题", we_guessed: "我们猜的", change: "更改",
   about: "关于", add_name: "添加", person_name: "名字", who_can_see: "谁能看到", everyone: "所有人", only_some: "仅部分人", hide_from: "对谁隐藏…",
   pick_who_sees: "谁能看到？", pick_who_not: "谁不能看到？",
@@ -113,4 +113,5 @@ export const zh: Partial<Strings> = {
   help_c3: "提醒怎么用？",
   help_c4: "语音不工作",
   family_sub_1: "目前只有你 · 在下方邀请家人",
+  invite_nudge: "家人都加入，Meora 才最好用。",
 };

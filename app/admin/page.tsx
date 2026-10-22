@@ -13,8 +13,8 @@ type Stats = {
 };
 
 const ROWS: [string, string][] = [
-  ["open", "App opened"], ["installed_open", "Opened from home-screen app"], ["family_started", "Families started"], ["join_request:pics", "Join requests (3 pictures)"],
-  ["join_request:qr", "Join requests (QR / link)"], ["join_allowed", "Join requests allowed"], ["join_denied", "Join requests refused"], ["invite_shown", "Invites shown"],
+  ["open", "App opened"], ["installed_open", "Opened from home-screen app"], ["welcome_view", "Saw the welcome screen"], ["tap_start", "…tapped Start a new family"], ["tap_join", "…tapped Join my family"], ["family_started", "Families started"], ["join_request:pics", "Join requests (3 pictures)"],
+  ["join_request:qr", "Join requests (QR / link)"], ["join_allowed", "Join requests allowed"], ["join_denied", "Join requests refused"], ["invite_shown", "Invites shown"], ["invite_nudge", "Tapped 'Invite a family member' on Home"],
   ["saved", "Notes saved"], ["edited", "Notes edited"], ["with_photo", "…with a photo"], ["with_voice", "…with a voice clip"], ["with_reminder", "…with a reminder"], ["private_note", "…private (only some)"],
   ["mic_save", "Mic opened to save"], ["ask", "Questions asked"], ["ask_found", "…answered"], ["ask_found_smart", "…answered by smart answers"], ["ask_not_found", "…not found"],
   ["ask_family", "Asked the family"], ["answered", "Family questions answered"], ["listen", "Listen pressed"], ["translate", "Translate pressed"],

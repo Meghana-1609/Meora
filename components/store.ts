@@ -1,5 +1,6 @@
 "use client";
 // The app's brain on the phone: keeps keys, locks/unlocks notes, talks to the server, works offline.
+import { standardSpeech } from "./i18n";
 import { useSyncExternalStore } from "react";
 import * as C from "@/lib/crypto";
 import * as L from "@/lib/local";
@@ -34,7 +35,7 @@ const region = () => {
 const defaultEmergency = () => ({ IN: "108", US: "911", CA: "911", GB: "999", AU: "000", NZ: "111", PK: "1122", BD: "999", LK: "1990" } as Record<string, string>)[region()] ?? "112";
 export const SPEECH_DEFAULT: Record<UiLang, string> = { en: "en-US", te: "te-IN", hi: "hi-IN", ta: "ta-IN", es: "es-ES", fr: "fr-FR", ar: "ar-SA", zh: "zh-CN" };
 const DEFAULT_SETTINGS = (): Settings => ({
-  lang: "en", speech: typeof navigator !== "undefined" && navigator.language.startsWith("en") ? navigator.language : "en-US",
+  lang: "en", speech: "en-US",
   text: 2, readAloud: true, rate: 1, simple: false, dark: false, defaultVis: "all", smartOn: true, emergency: defaultEmergency(), chosen: false, toured: false,
 });
 
@@ -82,14 +83,16 @@ export async function boot() {
 }
 async function bootInner() {
   const settings = { ...DEFAULT_SETTINGS(), ...((await L.get<Settings>("settings")) ?? {}) };
+  settings.speech = standardSpeech(settings.speech);
   const fams = (await L.get<FamRef[]>("fams")) ?? [];
   const savedLock = await L.get<Lock>("lock");
   const lock = savedLock ?? { kind: "none" as const };
   const pending = await L.get<Pending>("pending");
   let bioAvailable = false;
   try { bioAvailable = !!window.PublicKeyCredential && (await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()); } catch { /* */ }
-  setState({ settings, fams, lock, bioAvailable, lockChosen: !!savedLock });
-  fetch("/api/config").then((r) => r.json()).then((j) => setState({ ai: !!j.ai })).catch(() => {});
+  // Remember whether smart voice is available, so voice screens know it straight away next time.
+  setState({ settings, fams, lock, bioAvailable, lockChosen: !!savedLock, ai: !!(await L.get<boolean>("ai")) });
+  fetch("/api/config").then((r) => r.json()).then((j) => { setState({ ai: !!j.ai }); void L.set("ai", !!j.ai).catch(() => {}); }).catch(() => {});
   document.addEventListener("visibilitychange", onVisibility);
   window.addEventListener("online", () => void syncNow());
 

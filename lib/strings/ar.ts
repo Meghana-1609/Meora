@@ -1,6 +1,6 @@
 import type { Strings } from "./en";
 export const ar: Partial<Strings> = {
-  tag: "ذاكرة عائلتك.",
+  tag: "Your family's brain.",
   choose_lang: "اختر لغتك", more_langs: "لغات أخرى", more_langs_note: "ستبقى كلمات التطبيق بالإنجليزية. يمكنك التحدث وحفظ الملاحظات بلغتك.",
   welcome_title: "ذاكرة عائلتك، في مكان واحد آمن.", welcome_sub: "احفظ بالكلام. اسأل في أي وقت. عائلتك فقط تستطيع القراءة.",
   start_family: "ابدأ عائلة جديدة", join_family: "انضم إلى عائلتي", free_line: "مجاني. بلا إعلانات. بلا كلمة مرور.", lost_phones: "فُقدت كل الهواتف؟ استخدم صور الاستعادة",
@@ -31,7 +31,7 @@ export const ar: Partial<Strings> = {
   speak_now: "تكلّم الآن.", listening: "أستمع…", tap_stop: "المس مرة أخرى عند الانتهاء", tap_to_speak: "المس وتكلّم",
   photo: "صورة", type: "كتابة", record_voice: "صوت", type_here: "اكتب هنا", type_example: "مثال: حبة ضغط أمي Amlong 5، واحدة كل صباح.", speak_instead: "تكلّم بدلًا من ذلك",
   say_what: "قل أو اكتب الآن ما هذا", saving_in: "سيُحفظ في {topic}", voice_note: "ملاحظة صوتية",
-  no_mic: "الكتابة بالصوت لا تعمل في هذا المتصفح. اكتب أو استخدم Chrome.", mic_denied: "لا يستطيع Meora سماعك. اسمح بالميكروفون، أو اكتب.", mic_trouble: "لم يُسمع. حاول مجددًا أو اكتب.",
+  no_mic: "الصوت غير متاح الآن. يُرجى الكتابة.", mic_denied: "لا يستطيع Meora سماعك. اسمح بالميكروفون، أو اكتب.", mic_trouble: "لم يُسمع. حاول مجددًا أو اكتب.",
   check_save: "راجع واحفظ", you_said: "قلت", fix_words: "صحّح الكلمات", hear_it: "استمع", topic: "الموضوع", we_guessed: "خمّنّا", change: "تغيير",
   about: "عن", add_name: "إضافة", person_name: "الاسم", who_can_see: "من يستطيع الرؤية", everyone: "الجميع", only_some: "بعضهم فقط", hide_from: "إخفاء عن…",
   pick_who_sees: "من يستطيع رؤيتها؟", pick_who_not: "من لا يجب أن يراها؟",
@@ -113,4 +113,5 @@ export const ar: Partial<Strings> = {
   help_c3: "كيف تعمل التذكيرات؟",
   help_c4: "الصوت لا يعمل",
   family_sub_1: "أنت فقط حتى الآن · ادعُ عائلتك بالأسفل",
+  invite_nudge: "يعمل Meora بشكل أفضل عندما تنضم عائلتك.",
 };

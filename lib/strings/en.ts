@@ -30,7 +30,7 @@ export const en = {
   speak_now: "Speak now.", listening: "Listening…", tap_stop: "Tap again when you finish", tap_to_speak: "Tap and speak",
   photo: "Photo", type: "Type", record_voice: "Voice", type_here: "Type here", type_example: "Example: Amma's BP tablet is Amlong 5, one every morning.", speak_instead: "Speak instead",
   say_what: "Now say or type what this is", saving_in: "Saving in {topic}", voice_note: "Voice note",
-  no_mic: "Voice typing doesn't work in this browser. Please type, or use Chrome.", mic_denied: "Meora can't hear you. Allow the microphone, or type instead.", mic_trouble: "Couldn't hear that. Try again or type.",
+  no_mic: "Voice isn't available right now. Please type instead.", mic_denied: "Meora can't hear you. Allow the microphone, or type instead.", mic_trouble: "Couldn't hear that. Try again or type.",
   check_save: "Check & save", you_said: "You said", fix_words: "Fix words", hear_it: "Hear it", topic: "Topic", we_guessed: "we guessed", change: "Change",
   about: "About", add_name: "Add", person_name: "Name", who_can_see: "Who can see", everyone: "Everyone", only_some: "Only some", hide_from: "Hide from…",
   pick_who_sees: "Who can see it?", pick_who_not: "Who should NOT see it?",
@@ -112,5 +112,6 @@ export const en = {
   help_c3: "How do reminders work?",
   help_c4: "Voice not working",
   family_sub_1: "Just you so far · invite your family below",
+  invite_nudge: "Meora works best when your family is in it.",
 };
 export type Strings = typeof en;

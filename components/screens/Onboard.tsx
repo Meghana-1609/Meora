@@ -55,6 +55,7 @@ export function Welcome() {
   const [err, setErr] = useState("");
   const link = typeof location !== "undefined" ? new URLSearchParams(location.search).get("join") ?? "" : "";
   const fams = useApp((s) => s.fams);
+  useEffect(() => { track("welcome_view"); }, []);
 
   const run = async (fn: () => Promise<void>) => {
     setBusy(true); setErr("");
@@ -139,13 +140,13 @@ export function Welcome() {
         <LangPill />
       </div>
       <div className="mt-14"><Logo size={84} /></div>
-<p className="mt-5 text-[.8rem] font-semibold uppercase tracking-[0.16em] text-navy">{t("tag")}</p>
-      <h1 className="mt-7 text-[1.72rem] font-semibold leading-[1.1]">{t("welcome_title")}</h1>
+      <p className="mt-5 text-[.8rem] font-semibold uppercase tracking-[0.16em] text-navy">{t("tag")}</p>
+      <h1 className="mt-2 text-[1.72rem] font-semibold leading-[1.1]">{t("welcome_title")}</h1>
       <p className="mt-4 text-[1rem] leading-relaxed text-soft">{t("welcome_sub")}</p>
       <div className="mt-auto grid gap-3 pt-10">
         {err && <p className="text-center font-semibold text-brick">{err}</p>}
-        <Btn onClick={() => setStep("start")} className="!text-[1.04rem]">{t("start_family")}</Btn>
-        <Btn kind="light" onClick={() => setStep("join")} className="!text-[1.04rem]">{t("join_family")}</Btn>
+        <Btn onClick={() => { track("tap_start"); setStep("start"); }} className="!text-[1.04rem]">{t("start_family")}</Btn>
+        <Btn kind="light" onClick={() => { track("tap_join"); setStep("join"); }} className="!text-[1.04rem]">{t("join_family")}</Btn>
         <p className="text-center text-[0.9rem] text-soft">{t("free_line")}</p>
         <Btn kind="ghost" className="!min-h-[2.6rem] !text-[0.95rem]" onClick={() => setStep("recover")}>{t("lost_phones")}</Btn>
         {fams.length > 0 && <Btn kind="ghost" className="!min-h-[2.6rem] !text-[0.95rem]" onClick={backToApp}>{t("back")}</Btn>}
@@ -284,7 +285,7 @@ export function Locked() {
   return (
     <main className="fade grid min-h-dvh place-items-center bg-[#1D2742] px-6 text-center text-white">
       <div>
-        <Logo size={72} flat />
+        <div className="flex justify-center"><Logo size={72} flat /></div>
         <button onClick={() => void unlockBio()} className="tap mx-auto mt-12 grid h-36 w-36 place-items-center rounded-full bg-white/[.08] shadow-[0_0_0_16px_rgba(255,255,255,.04)]" aria-label={t("touch_open")}>
           <Icon name="finger" size={70} stroke={1.6} />
         </button>

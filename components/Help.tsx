@@ -9,7 +9,7 @@ import { Icon, Spinner } from "./ui";
 import { track } from "./track";
 
 type Msg = { me: boolean; text: string };
-const docs = FAQ.map((f, i) => ({ id: String(i), text: `${f.q} ${f.k} ${f.a}`, about: [], topic: "other" as const, updated: 0 }));
+const docs = FAQ.map((f, i) => ({ id: String(i), text: `${f.q} ${f.q} ${f.k}`, about: [], topic: "other" as const, updated: 0 }));
 
 /** Local answer from the FAQ list (works offline, no AI needed). */
 export function faqAnswer(q: string): string | null {
