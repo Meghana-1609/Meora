@@ -16,6 +16,7 @@ export const metadata: Metadata = {
   applicationName: "Meora",
   keywords: ["Meora", "Meora app", "family memory app", "family notes", "voice notes for family", "elderly friendly app", "private family app", "encrypted family app"],
   alternates: { canonical: "/" },
+  verification: { google: "wGOeAsutge-0-GxcVNcs3dSehbMjNOYKCYgQMY30Wnk" },
   openGraph: { type: "website", url: SITE, siteName: "Meora", title: "Meora · Your family's brain", description: DESC, images: [{ url: "/icons/icon-512.png", width: 512, height: 512, alt: "Meora" }] },
   twitter: { card: "summary", title: "Meora · Your family's brain", description: DESC, images: ["/icons/icon-512.png"] },
   appleWebApp: { capable: true, title: "Meora", statusBarStyle: "default" },
