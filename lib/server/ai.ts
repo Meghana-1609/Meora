@@ -5,19 +5,32 @@ import { HttpError } from "./store";
 export const aiReady = () => !!process.env.GEMINI_API_KEY;
 
 type Part = { text: string } | { inline_data: { mime_type: string; data: string } };
+// Newest model first; if Google retires or renames one, the next one is tried automatically.
+const TEXT_MODELS = () => [process.env.GEMINI_MODEL, "gemini-3.8-flash", "gemini-2.5-flash"].filter(Boolean) as string[];
+const TTS_MODELS = () => [process.env.GEMINI_TTS_MODEL, "gemini-3.8-flash-tts", "gemini-3.8-flash-lite-tts", "gemini-2.5-flash-preview-tts"].filter(Boolean) as string[];
+
+async function callModels(models: string[], body: (model: string) => unknown, key: string, timeout = 25000) {
+  let last: Response | null = null;
+  for (const model of [...new Set(models)]) {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+      method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": key },
+      body: JSON.stringify(body(model)), signal: AbortSignal.timeout(timeout),
+    });
+    if (r.ok || r.status === 429) return r;
+    last = r;
+    if (![400, 403, 404].includes(r.status)) break; // only move on when this model is unknown or unavailable
+  }
+  return last!;
+}
+
 async function gemini(prompt: string, extra: Part[] = []): Promise<Record<string, unknown>> {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new HttpError(503, "Smart answers are not set up on this server.");
-  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
-  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-    method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": key },
-    body: JSON.stringify({ contents: [{ parts: [...extra, { text: prompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0 } }),
-    signal: AbortSignal.timeout(25000),
-  });
+  const r = await callModels(TEXT_MODELS(), () => ({ contents: [{ parts: [...extra, { text: prompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0 } }), key);
   if (r.status === 429) throw new HttpError(429, "Smart answers reached today's free limit. Plain search still works.");
   if (!r.ok) throw new HttpError(502, "Smart answers are not available right now.");
   const j = await r.json();
-  const text = j?.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
+  const text = j?.candidates?.[0]?.content?.parts?.find((p: { text?: string }) => typeof p.text === "string")?.text ?? "{}";
   try { return JSON.parse(text); } catch { return {}; }
 }
 
@@ -60,23 +73,22 @@ export async function aiSpeak(text: string) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new HttpError(503, "Not set up.");
   if (!text || text.length > 1200) throw new HttpError(400, "Too long.");
-  const model = process.env.GEMINI_TTS_MODEL || "gemini-2.5-flash-preview-tts";
   const voice = process.env.GEMINI_VOICE || "Kore";
-  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-    method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": key },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: `Say this warmly and clearly, at a calm pace, like a kind family member: ${text}` }] }],
-      generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } } },
-    }),
-    signal: AbortSignal.timeout(25000),
-  });
+  // Newer voice models read the text exactly as given, so only the older preview model gets a style hint.
+  const r = await callModels(TTS_MODELS(), (model) => ({
+    contents: [{ parts: [{ text: model.includes("preview") ? `Say this warmly and clearly, at a calm pace, like a kind family member: ${text}` : text }] }],
+    generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } } },
+  }), key);
   if (!r.ok) throw new HttpError(r.status === 429 ? 429 : 502, "Voice not available right now.");
   const j = await r.json();
   const part = j?.candidates?.[0]?.content?.parts?.find((p: { inlineData?: { data: string; mimeType: string } }) => p.inlineData)?.inlineData;
   if (!part?.data) throw new HttpError(502, "Voice not available right now.");
+  const raw = Buffer.from(part.data, "base64");
+  // Newer models already send a complete WAV file; older ones send raw sound that needs a WAV header.
+  if (raw.subarray(0, 4).toString("ascii") === "RIFF") return { audio: raw.toString("base64"), mime: "audio/wav" };
+  if (/mpeg|mp3|ogg|opus/i.test(part.mimeType ?? "")) return { audio: part.data as string, mime: String(part.mimeType).split(";")[0] };
   const rate = Number(/rate=(\d+)/.exec(part.mimeType ?? "")?.[1] ?? 24000);
-  const pcm = Buffer.from(part.data, "base64");
-  return { audio: wav(pcm, rate).toString("base64"), mime: "audio/wav" };
+  return { audio: wav(raw, rate).toString("base64"), mime: "audio/wav" };
 }
 function wav(pcm: Buffer, rate: number) {
   const h = Buffer.alloc(44);
