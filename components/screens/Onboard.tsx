@@ -1,8 +1,8 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Btn, Confirm, Icon, Logo, Page, Spinner, Wordmark, toast } from "../ui";
 import { t, LANGS, MORE_SPEECH } from "../i18n";
-import { afterRecovery, ApiError, backToApp, cancelJoin, go, requestJoin, saveSettings, setLock, startFamily, unlockBio, unlockPics, useApp, useRecovery, SPEECH_DEFAULT, type UiLang } from "../store";
+import { afterRecovery, ApiError, backToApp, cancelJoin, getState, go, requestJoin, saveSettings, setLock, startFamily, unlockBio, unlockPics, useApp, useRecovery, SPEECH_DEFAULT, type UiLang } from "../store";
 import { JOIN_PICTURES, PICTURES, RECOVERY_LENGTH } from "@/lib/pictures";
 import { canListen, listen } from "@/lib/speech";
 import { track } from "../track";
@@ -46,9 +46,13 @@ export function LangScreen({ onDone }: { onDone?: () => void }) {
   );
 }
 
-type Step = "home" | "start" | "join" | "joinName" | "scan" | "recover" | "recoverName";
+type Step = "intro" | "home" | "start" | "join" | "joinName" | "scan" | "recover" | "recoverName";
 export function Welcome() {
-  const [step, setStep] = useState<Step>(() => (typeof location !== "undefined" && new URLSearchParams(location.search).get("join") ? "joinName" : "home"));
+  const [step, setStep] = useState<Step>(() => {
+    if (typeof location !== "undefined" && new URLSearchParams(location.search).get("join")) return "joinName";
+    const st = getState();
+    return st.welcomeStep ?? (st.fams.length ? "home" : "intro");
+  });
   const [code, setCode] = useState<number[]>([]);
   const [rec, setRec] = useState<number[]>([]);
   const [busy, setBusy] = useState(false);
@@ -133,25 +137,76 @@ export function Welcome() {
     </Page>
   );
 
+  if (step === "intro") return (
+    <Dark>
+      <div className="flex flex-1 flex-col items-center justify-center px-3 text-center">
+        <Wave big />
+        <h1 className="mt-11 text-[1.87rem] font-medium leading-[1.2] tracking-[-.015em]">{t("intro_1")}<br /><span className="text-[#D4B98A]">{t("intro_2")}</span></h1>
+        <p className="mt-4 max-w-[21rem] text-[1.03rem] leading-[1.6] text-[#F3F1EC]/65">{t("intro_body")}</p>
+      </div>
+      <Dots at={0} />
+      <button onClick={() => { track("tap_continue"); setStep("home"); }} className="tap mt-5 flex min-h-[3.6rem] w-full items-center justify-center rounded-[1.1rem] bg-[#F3F1EC] text-[1.1rem] font-semibold text-[#1D2742]">{t("continue")}</button>
+      <p className="mt-3.5 flex items-center justify-center gap-1.5 text-center text-[.84rem] text-[#F3F1EC]/50"><Icon name="lock" size={13} />{t("private_free")}</p>
+    </Dark>
+  );
+
   return (
-    <Page>
-      <div className="flex items-center justify-between">
-        <span className="font-bold tracking-[0.08em]">MEORA</span>
-        <LangPill />
+    <Dark>
+      <div className="mt-12 opacity-90"><Wave /></div>
+      <h1 className="mt-7 text-center text-[1.73rem] font-medium leading-[1.25] tracking-[-.01em]">{t("begin_title")}</h1>
+      <p className="mt-2 text-center text-[1rem] text-[#F3F1EC]/60">{t("begin_sub")}</p>
+      <div className="mt-8 grid gap-3">
+        {err && <p className="text-center font-semibold text-[#F0A79F]" role="alert">{err}</p>}
+        <Choice primary icon="plus" title={t("start_family")} sub={t("begin_start_sub")} onClick={() => { track("tap_start"); setStep("start"); }} />
+        <Choice icon="users" title={t("join_family")} sub={t("begin_join_sub")} onClick={() => { track("tap_join"); setStep("join"); }} />
       </div>
-      <div className="mt-14"><Logo size={84} /></div>
-      <p className="mt-5 text-[.8rem] font-semibold uppercase tracking-[0.16em] text-navy">{t("tag")}</p>
-      <h1 className="mt-2 text-[1.72rem] font-semibold leading-[1.1]">{t("welcome_title")}</h1>
-      <p className="mt-4 text-[1rem] leading-relaxed text-soft">{t("welcome_sub")}</p>
-      <div className="mt-auto grid gap-3 pt-10">
-        {err && <p className="text-center font-semibold text-brick">{err}</p>}
-        <Btn onClick={() => { track("tap_start"); setStep("start"); }} className="!text-[1.04rem]">{t("start_family")}</Btn>
-        <Btn kind="light" onClick={() => { track("tap_join"); setStep("join"); }} className="!text-[1.04rem]">{t("join_family")}</Btn>
-        <p className="text-center text-[0.9rem] text-soft">{t("free_line")}</p>
-        <Btn kind="ghost" className="!min-h-[2.6rem] !text-[0.95rem]" onClick={() => setStep("recover")}>{t("lost_phones")}</Btn>
-        {fams.length > 0 && <Btn kind="ghost" className="!min-h-[2.6rem] !text-[0.95rem]" onClick={backToApp}>{t("back")}</Btn>}
+      <div className="mt-auto pt-8">
+        {fams.length === 0 && <Dots at={1} />}
+        <p className="mt-5 text-center text-[.95rem] text-[#F3F1EC]/60">{t("lost_q")} <button onClick={() => setStep("recover")} className="tap font-semibold text-[#F3F1EC] underline underline-offset-4">{t("recover_link")}</button></p>
+        {fams.length > 0 && <button onClick={backToApp} className="tap mx-auto mt-3 block px-3 py-2 text-[.95rem] font-semibold text-[#F3F1EC]/80">{t("back")}</button>}
       </div>
-    </Page>
+    </Dark>
+  );
+}
+
+/** The navy welcome pages: Meora mark and the language button on top. */
+function Dark({ children }: { children: ReactNode }) {
+  return (
+    <main className="fade flex min-h-dvh flex-col bg-[#1D2742] text-[#F3F1EC]">
+      <div className="mx-auto flex w-full max-w-[34rem] flex-1 flex-col px-5 pb-[max(1.6rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
+        <div className="flex items-center justify-between">
+          <span className="flex items-center gap-2.5"><Logo size={32} flat /><span className="text-[.9rem] font-semibold tracking-[.22em]">MEORA</span></span>
+          <LangPill dark />
+        </div>
+        {children}
+      </div>
+    </main>
+  );
+}
+const WAVE = ["#C48E7E", "#8FAE8D", "#7F96C2", "#E6E3DD", "#D4B98A"];
+/** Family-coloured sound wave. Big: with the microphone in the middle. */
+function Wave({ big }: { big?: boolean }) {
+  const side = big ? [14, 26, 40, 24, 56, 80, 52] : [6, 10, 16, 10, 22, 30, 20, 14, 26, 34];
+  const bars = (hs: number[], off: number) => hs.map((h, i) => <i key={i} style={{ height: `${h / 16}rem`, background: WAVE[(i + off) % 5], animationDelay: `${((i * 37) % 11) / 10}s`, width: big ? undefined : ".33rem" }} />);
+  if (!big) return <div className="mwave flex h-10 items-center justify-center gap-[.28rem]" aria-hidden>{bars(side, 0)}{bars([...side].reverse(), 2)}</div>;
+  return (
+    <div className="mwave flex h-[7.5rem] items-center justify-center gap-[.33rem]" aria-hidden>
+      {bars(side, 0)}
+      <span className="mx-3.5 grid h-[4.75rem] w-[4.75rem] shrink-0 place-items-center rounded-full bg-[#F3F1EC] text-[#1D2742]"><Icon name="mic" size={30} /></span>
+      {bars([...side].reverse(), 2)}
+    </div>
+  );
+}
+function Dots({ at }: { at: number }) {
+  return <div className="flex justify-center gap-1.5" aria-hidden>{[0, 1].map((i) => <i key={i} className={`block h-1.5 rounded-full ${i === at ? "w-5 bg-[#F3F1EC]" : "w-1.5 bg-[#F3F1EC]/30"}`} />)}</div>;
+}
+function Choice({ icon, title, sub, primary, onClick }: { icon: string; title: string; sub: string; primary?: boolean; onClick: () => void }) {
+  return (
+    <button onClick={onClick} className={`tap flex w-full items-center gap-3.5 rounded-[1.25rem] p-[1.1rem] text-start ${primary ? "bg-[#F3F1EC] text-[#1D2742]" : "border border-white/15 bg-white/5"}`}>
+      <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-[.95rem] ${primary ? "bg-[#1D2742] text-[#F3F1EC]" : "bg-white/10 text-[#D4B98A]"}`}><Icon name={icon} size={22} /></span>
+      <span className="min-w-0 flex-1"><b className="block text-[1.1rem] font-semibold">{title}</b><span className="mt-0.5 block text-[.9rem] leading-[1.45] opacity-70">{sub}</span></span>
+      <Icon name="chev" size={18} className="shrink-0 rtl:rotate-180" />
+    </button>
   );
 }
 
@@ -163,10 +218,11 @@ function TopBar({ onBack }: { onBack: () => void }) {
     </div>
   );
 }
-export function LangPill() {
+export function LangPill({ dark }: { dark?: boolean }) {
   const lang = useApp((s) => s.settings.lang);
   const [open, setOpen] = useState(false);
-  if (open) return <div className="fixed inset-0 z-40 overflow-auto bg-paper"><LangScreen onDone={() => setOpen(false)} /></div>;
+  if (open) return <div className="fixed inset-0 z-40 overflow-auto bg-paper text-ink"><LangScreen onDone={() => setOpen(false)} /></div>;
+  if (dark) return <button onClick={() => setOpen(true)} className="tap flex items-center gap-1.5 rounded-full border border-white/15 bg-white/[.07] px-3 py-1.5 text-[.9rem] font-medium"><Icon name="globe" size={16} />{LANGS.find((l) => l.code === lang)?.name}<Icon name="down" size={14} /></button>;
   return <button onClick={() => setOpen(true)} className="tap card flex items-center gap-1.5 !rounded-[.8rem] px-3 py-2 text-[0.95rem] font-semibold"><Icon name="globe" size={18} />{LANGS.find((l) => l.code === lang)?.name}</button>;
 }
 

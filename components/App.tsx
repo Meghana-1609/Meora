@@ -1,5 +1,6 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Intro, firstOpen } from "./Intro";
 import { boot, useApp } from "./store";
 import { nav, useRoute } from "./nav";
 import { Logo, Toaster, toast } from "./ui";
@@ -13,6 +14,7 @@ import { News, TopicScreen } from "./screens/Topic";
 import { NoteScreen } from "./screens/Note";
 import { Emergency } from "./screens/Emergency";
 import { Family } from "./screens/Family";
+import { Families } from "./screens/Families";
 import { Privacy, Settings, Tour } from "./screens/Settings";
 import { More } from "./screens/More";
 import { AllTopics } from "./screens/Topics";
@@ -23,7 +25,8 @@ export function App() {
   const stage = useApp((s) => s.stage);
   const s = useApp((x) => x.settings);
   const removed = useApp((x) => x.removed);
-  useEffect(() => { void boot(); }, []);
+  const [intro, setIntro] = useState(false);
+  useEffect(() => { setIntro(firstOpen()); void boot(); }, []);
   useEffect(() => {
     const h = document.documentElement;
     h.classList.remove("t1", "t2", "t3"); h.classList.add(`t${s.text}`);
@@ -31,9 +34,13 @@ export function App() {
     h.lang = s.lang; h.dir = s.lang === "ar" ? "rtl" : "ltr";
   }, [s.text, s.dark, s.lang]);
   useEffect(() => { if (removed) toast(t("removed")); }, [removed]);
+  // After starting, joining or recovering a family, open its Home page (not the page you came from).
+  const prev = useRef(stage);
+  useEffect(() => { if (stage === "app" && s.toured && ["welcome", "recovery", "waiting", "setlock"].includes(prev.current)) nav.home(); prev.current = stage; }, [stage]);
   useEffect(() => { if (stage !== "loading") startTracking(s.lang, s.speech); }, [stage]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
+    <>
     <div key={s.lang}>
       {stage === "loading" && <Splash />}
       {stage === "lang" && <LangScreen />}
@@ -45,6 +52,8 @@ export function App() {
       {stage === "app" && <Main />}
       <Toaster />
     </div>
+    {intro && <Intro onDone={() => setIntro(false)} />}
+    </>
   );
 }
 
@@ -73,6 +82,7 @@ function Screen({ r }: { r: ReturnType<typeof useRoute> }) {
     case "note": return <NoteScreen id={r.id} />;
     case "emergency": return <Emergency person={r.person} />;
     case "family": return <Family />;
+    case "families": return <Families />;
     case "settings": return <Settings />;
     case "lang": return <LangScreen onDone={() => nav.back()} />;
     case "privacy": return <Privacy />;

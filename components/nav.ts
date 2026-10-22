@@ -6,7 +6,7 @@ import type { TopicId } from "@/lib/types";
 export type Route =
   | { s: "home" } | { s: "save"; topic?: TopicId; about?: string; answers?: string; edit?: string; mode?: "type" | "photo" | "voice" }
   | { s: "ask"; q?: string } | { s: "topic"; id: TopicId } | { s: "topics" } | { s: "note"; id: string } | { s: "emergency"; person?: string }
-  | { s: "family" } | { s: "settings" } | { s: "lang" } | { s: "privacy" } | { s: "questions" } | { s: "news" } | { s: "recovery" } | { s: "tour" } | { s: "more" };
+  | { s: "family" } | { s: "families" } | { s: "settings" } | { s: "lang" } | { s: "privacy" } | { s: "questions" } | { s: "news" } | { s: "recovery" } | { s: "tour" } | { s: "more" };
 
 const TOPIC_IDS = ["health", "contacts", "where", "dates", "recipes", "home", "money", "kids", "vehicles", "stories", "other"];
 export function pathOf(r: Route): string {
@@ -28,7 +28,7 @@ export function routeOf(path: string): Route {
   if (a === "settings" && b === "language") return { s: "lang" };
   if (a === "settings" && b === "recovery") return { s: "recovery" };
   if (a === "help") return { s: "tour" };
-  const simple = ["save", "ask", "topics", "emergency", "family", "settings", "privacy", "questions", "news", "more"];
+  const simple = ["save", "ask", "topics", "emergency", "family", "families", "settings", "privacy", "questions", "news", "more"];
   return simple.includes(a) ? ({ s: a } as Route) : { s: "home" };
 }
 

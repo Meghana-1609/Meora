@@ -32,6 +32,7 @@ const P: Record<string, string> = {
   trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   chev: '<path d="M9 6l6 6-6 6"/>',
+  down: '<path d="M7 10l5 5 5-5"/>',
   close: '<path d="M6 6l12 12M18 6L6 18"/>',
   text: '<path d="M4 7V5h12v2M10 5v14M8 19h4M14 12v-1h6v1M17 11v8M16 19h2"/>',
   moon: '<path d="M20 14A8 8 0 0 1 10 4a8 8 0 1 0 10 10z"/>',

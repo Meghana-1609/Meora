@@ -9,7 +9,7 @@ export function BottomNav({ at }: { at: Route["s"] }) {
   const requests = useApp((s) => s.family?.requests.length ?? 0);
   const openQs = useApp((s) => Object.values(s.questions).filter((q) => !q.data.answer && q.data.by !== s.me?.id).length);
   const tab = (s: Route["s"], icon: string, label: string, badge = 0) => {
-    const on = at === s || (s === "more" && ["more", "settings", "lang", "privacy", "questions", "news", "recovery", "emergency"].includes(at)) || (s === "home" && ["topic", "topics", "note"].includes(at));
+    const on = at === s || (s === "more" && ["more", "settings", "lang", "privacy", "questions", "news", "recovery", "emergency"].includes(at)) || (s === "home" && ["topic", "topics", "note"].includes(at)) || (s === "family" && at === "families");
     return (
       <button onClick={() => nav.tab({ s } as Route)} aria-current={on ? "page" : undefined} aria-label={label}
         className={`tap relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[.72rem] font-semibold ${on ? "text-ink" : "text-soft"}`}>

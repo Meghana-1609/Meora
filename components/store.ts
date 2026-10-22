@@ -24,7 +24,13 @@ export type State = {
   notes: Record<string, Rec<NoteData>>; questions: Record<string, Rec<QuestionData>>; profiles: Record<string, Rec<ProfileData>>;
   online: boolean; ai: boolean; pending?: { name: string; denied?: boolean }; lock: Lock; seen: number; outbox: number;
   removed?: boolean; bioAvailable: boolean; recoveryPicks?: number[]; lockChosen: boolean;
+  /** Where the welcome screens start: the intro, the begin choice, or straight to start / join. */
+  welcomeStep?: WelcomeStep;
+  /** A small summary of each family on this phone, so the families page can show them all. */
+  sums: Record<string, FamSum>;
 };
+export type WelcomeStep = "intro" | "home" | "start" | "join";
+export type FamSum = { nick?: string; first: string; people: number; notes: number; who: { n: string; c: string }[]; at: number };
 
 const region = () => {
   if (typeof navigator === "undefined") return "";
@@ -34,13 +40,22 @@ const region = () => {
 };
 const defaultEmergency = () => ({ IN: "108", US: "911", CA: "911", GB: "999", AU: "000", NZ: "111", PK: "1122", BD: "999", LK: "1990" } as Record<string, string>)[region()] ?? "112";
 export const SPEECH_DEFAULT: Record<UiLang, string> = { en: "en-US", te: "te-IN", hi: "hi-IN", ta: "ta-IN", es: "es-ES", fr: "fr-FR", ar: "ar-SA", zh: "zh-CN" };
+/** The phone's own language, if Meora speaks it. Used until the person picks one. */
+const phoneLang = (): UiLang | null => {
+  if (typeof navigator === "undefined") return null;
+  for (const l of [...(navigator.languages ?? []), navigator.language]) {
+    const b = (l ?? "").split("-")[0].toLowerCase();
+    if ((Object.keys(SPEECH_DEFAULT) as UiLang[]).includes(b as UiLang)) return b as UiLang;
+  }
+  return null;
+};
 const DEFAULT_SETTINGS = (): Settings => ({
   lang: "en", speech: "en-US",
   text: 2, readAloud: true, rate: 1, simple: false, dark: false, defaultVis: "all", smartOn: true, emergency: defaultEmergency(), chosen: false, toured: false,
 });
 
 let state: State = {
-  stage: "loading", settings: DEFAULT_SETTINGS(), fams: [], notes: {}, questions: {}, profiles: {}, online: true, ai: false,
+  stage: "loading", settings: DEFAULT_SETTINGS(), fams: [], notes: {}, questions: {}, profiles: {}, sums: {}, online: true, ai: false,
   lock: { kind: "none" }, seen: 0, outbox: 0, bioAvailable: false, lockChosen: false,
 };
 const subs = new Set<() => void>();
@@ -79,10 +94,11 @@ const fam = (action: string, b: Record<string, unknown> = {}, auth = true) => ap
 // ---------------- start-up ----------------
 export async function boot() {
   try { await bootInner(); }
-  catch { setState({ stage: "lang" }); }
+  catch { setState({ stage: "welcome" }); }
 }
 async function bootInner() {
   const settings = { ...DEFAULT_SETTINGS(), ...((await L.get<Settings>("settings")) ?? {}) };
+  if (!settings.chosen) { const l = phoneLang(); if (l) { settings.lang = l; settings.speech = SPEECH_DEFAULT[l]; } }
   settings.speech = standardSpeech(settings.speech);
   const fams = (await L.get<FamRef[]>("fams")) ?? [];
   const savedLock = await L.get<Lock>("lock");
@@ -91,7 +107,9 @@ async function bootInner() {
   let bioAvailable = false;
   try { bioAvailable = !!window.PublicKeyCredential && (await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()); } catch { /* */ }
   // Remember whether smart voice is available, so voice screens know it straight away next time.
-  setState({ settings, fams, lock, bioAvailable, lockChosen: !!savedLock, ai: !!(await L.get<boolean>("ai")) });
+  const sums: Record<string, FamSum> = {};
+  for (const f of fams) { const x = await L.get<FamSum>(`sum:${f.fam}`); if (x) sums[f.fam] = x; }
+  setState({ settings, fams, sums, lock, bioAvailable, lockChosen: !!savedLock, ai: !!(await L.get<boolean>("ai")) });
   fetch("/api/config").then((r) => r.json()).then((j) => { setState({ ai: !!j.ai }); void L.set("ai", !!j.ai).catch(() => {}); }).catch(() => {});
   document.addEventListener("visibilitychange", onVisibility);
   window.addEventListener("online", () => void syncNow());
@@ -99,7 +117,7 @@ async function bootInner() {
   const curId = await L.get<string>("cur");
   const cur = fams.find((f) => f.fam === curId) ?? fams[0];
   if (pending) { setState({ stage: "waiting", pending: { name: pending.name, denied: pending.denied } }); pollJoin(); return; }
-  if (!cur) { setState({ stage: settings.chosen ? "welcome" : "lang" }); return; }
+  if (!cur) { setState({ stage: "welcome" }); return; }
   await openFamily(cur);
   const joining = new URLSearchParams(location.search).get("join");
   setState({ stage: joining ? "welcome" : lock.kind === "none" ? "app" : "locked" });
@@ -133,7 +151,27 @@ async function openFamily(ref: FamRef) {
   for (const w of outbox) await applyWire(w);
   if (timer) clearInterval(timer);
   timer = setInterval(() => { if (!document.hidden && state.stage === "app") void syncNow(); }, 20000);
+  void saveSum();
   void syncNow();
+}
+
+/** Remember this family's name, people and count, so the families page can show it while another family is open. */
+async function saveSum() {
+  const ref = state.cur, fam = state.family; if (!ref || !fam) return;
+  const people = fam.members.filter((m) => !m.removed).sort((a, b) => a.joined - b.joined);
+  const old = state.sums[ref.fam];
+  const sum: FamSum = { nick: old?.nick, first: people[0]?.name ?? "", people: people.length, notes: Object.keys(state.notes).length, who: people.slice(0, 5).map((m) => ({ n: m.name, c: m.color })), at: old?.at ?? 0 };
+  sum.at = JSON.stringify({ ...sum, at: 0 }) === JSON.stringify({ ...old, at: 0 }) ? sum.at : Date.now();
+  if (old && sum.at === old.at) return;
+  setState({ sums: { ...state.sums, [ref.fam]: sum } });
+  try { await L.set(`sum:${ref.fam}`, sum); } catch { /* not important */ }
+}
+/** A name for a family, chosen on this phone only. Empty clears it. */
+export async function nameFamily(f: string, nick: string) {
+  const old = state.sums[f]; if (!old) return;
+  const sum = { ...old, nick: nick.trim().slice(0, 40) || undefined };
+  setState({ sums: { ...state.sums, [f]: sum } });
+  await L.set(`sum:${f}`, sum);
 }
 
 async function decryptAll(list: WireItem[]) {
@@ -180,6 +218,7 @@ export function syncNow(): Promise<void> {
       since = Math.max(since, r.now - 1000);
       if (famChanged) await decryptAll(Object.values(wire)); else if (fresh.length) await decryptAll(fresh);
       await L.set(`cache:${state.cur!.fam}`, { since, wire, family: r.family });
+      void saveSum();
     } catch { /* offline: keep what we have */ }
     finally { syncing = null; }
   })());
@@ -192,12 +231,13 @@ async function removedFromFamily() {
   setState({ removed: true });
 }
 async function forgetFamily(f: string) {
-  await L.delPrefix(`cache:${f}`); await L.delPrefix(`outbox:${f}`); await L.delPrefix(`keys:${f}`); await L.delPrefix(`blob:${f}`); await L.delPrefix(`seen:${f}`); await L.delPrefix(`rpicks:${f}`);
+  await L.delPrefix(`cache:${f}`); await L.delPrefix(`outbox:${f}`); await L.delPrefix(`keys:${f}`); await L.delPrefix(`blob:${f}`); await L.delPrefix(`seen:${f}`); await L.delPrefix(`rpicks:${f}`); await L.delPrefix(`sum:${f}`);
   const fams = state.fams.filter((x) => x.fam !== f);
   await L.set("fams", fams);
   keys = null; wire = {}; outbox = []; since = 0;
   if (timer) clearInterval(timer);
-  setState({ fams, cur: undefined, family: undefined, me: undefined, notes: {}, questions: {}, profiles: {} });
+  const sums = { ...state.sums }; delete sums[f];
+  setState({ fams, sums, cur: undefined, family: undefined, me: undefined, notes: {}, questions: {}, profiles: {} });
   if (fams[0]) await openFamily(fams[0]); else setState({ stage: "welcome" });
 }
 
@@ -278,7 +318,9 @@ export async function makeRecovery() {
   setState({ recoveryPicks: picks });
 }
 
-export const go = (stage: Stage) => setState({ stage });
+export const go = (stage: Stage) => setState({ stage, welcomeStep: undefined });
+/** Open the welcome screens to start or join another family. */
+export const addFamily = (step: WelcomeStep) => setState({ stage: "welcome", welcomeStep: step });
 export const backToApp = () => setState({ stage: state.lock.kind === "none" ? "app" : "locked" });
 export const afterRecovery = () => setState({ stage: state.lockChosen ? "app" : "setlock" });
 

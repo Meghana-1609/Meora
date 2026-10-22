@@ -4,7 +4,8 @@ import QRCode from "qrcode";
 import { Avatar, Btn, Confirm, Group, Header, Icon, Label, Page, Row, Toggle, toast } from "../ui";
 import { t } from "../i18n";
 import { nav } from "../nav";
-import { decide, go, invite, memberAction, switchFamily, syncNow, useApp } from "../store";
+import { addFamily, decide, invite, memberAction, syncNow, useApp } from "../store";
+import { famName, NameFamily } from "./Families";
 import { JOIN_PICTURES } from "@/lib/pictures";
 import type { Member } from "@/lib/types";
 import { track } from "../track";
@@ -18,6 +19,7 @@ export function Family() {
   const [sel, setSel] = useState<Member | null>(null);
   const [confirm, setConfirm] = useState<null | { text: string; yes: string; run: () => Promise<void> }>(null);
   const [renaming, setRenaming] = useState(false);
+  const [naming, setNaming] = useState(false);
   // check for new join requests often while this page is open
   useEffect(() => { void syncNow(); const id = setInterval(() => void syncNow(), 5000); return () => clearInterval(id); }, []);
 
@@ -79,17 +81,14 @@ export function Family() {
         ))}
       </Group>
 
-      {st.fams.length > 1 && (
-        <>
-          <Label>{t("your_families")}</Label>
-          <Group>{st.fams.map((f, i) => <Row key={f.fam} icon="home" title={t("family_n", { n: i + 1 })} right={f.fam === st.cur?.fam ? <Icon name="check" size={18} className="text-leaf" /> : undefined} onClick={() => switchFamily(f.fam).then(() => nav.home())} />)}</Group>
-        </>
-      )}
+      <Label>{t("your_families")}</Label>
+      <Group><Row icon="home" title={famName(st.cur ? st.sums[st.cur.fam] : undefined, Math.max(0, st.fams.findIndex((f) => f.fam === st.cur?.fam)))} sub={st.fams.length === 1 ? t("fams_sub_1") : t("fams_sub", { n: st.fams.length })} onClick={() => nav.push({ s: "families" })} /></Group>
 
       <Label>{t("settings")}</Label>
       <Group>
         <Row icon="edit" title={t("rename")} onClick={() => setRenaming(true)} />
-        <Row icon="plus" title={t("another_family")} onClick={() => go("welcome")} />
+        {st.cur && st.sums[st.cur.fam] && <Row icon="home" title={t("name_family")} onClick={() => setNaming(true)} />}
+        <Row icon="plus" title={t("another_family")} onClick={() => addFamily("home")} />
         <Row icon="door" title={t("leave_family")} danger onClick={() => setConfirm({ text: t("leave_q"), yes: t("leave_family"), run: () => memberAction({ action: "leave" }) })} />
       </Group>
       <div className="h-6" />
@@ -111,6 +110,7 @@ export function Family() {
         </div>
       )}
       {renaming && <Rename current={me?.name ?? ""} onClose={() => setRenaming(false)} />}
+      {naming && st.cur && <NameFamily fam={st.cur.fam} current={st.sums[st.cur.fam]?.nick ?? ""} onClose={() => setNaming(false)} />}
       {confirm && <Confirm text={confirm.text} yes={confirm.yes} no={t("cancel")} danger onNo={() => setConfirm(null)} onYes={async () => { const c = confirm; setConfirm(null); try { await c.run(); } catch { toast(t("error")); } }} />}
     </Page>
   );

@@ -66,3 +66,27 @@ html.t3 .topics { grid-template-columns: 1fr; }
 .with-nav { padding-bottom: calc(5.2rem + env(safe-area-inset-bottom)); }
 .with-nav main { min-height: calc(100dvh - 5.2rem - env(safe-area-inset-bottom)) !important; }
 html.dark .tile { background: var(--color-card) !important; box-shadow: 0 0 0 1px var(--color-line); }
+
+/* Welcome: the family-coloured sound wave breathes gently. */
+.mwave i { display: block; width: .4rem; border-radius: 1rem; opacity: .92; transform-origin: center; animation: mw 2.4s ease-in-out infinite; }
+@keyframes mw { 0%,100% { transform: scaleY(1); } 50% { transform: scaleY(.62); } }
+
+/* First open: the Meora mark builds itself (roof, then the family), then the name. */
+.intro { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; background: #1D2742; color: #F3F1EC; transition: opacity .55s ease; }
+.intro.out { opacity: 0; pointer-events: none; }
+.intro .tile { opacity: 0; transform: scale(.86); animation: itile .7s cubic-bezier(.2,.8,.2,1) .15s forwards; }
+.intro .roof { stroke-dasharray: 80; stroke-dashoffset: 80; animation: idraw .75s cubic-bezier(.6,0,.3,1) .55s forwards; }
+.intro .dot { opacity: 0; transform-box: fill-box; transform-origin: center; transform: translateY(-14px) scale(.4); animation: ipop .5s cubic-bezier(.3,1.6,.5,1) forwards; }
+.intro .d1 { animation-delay: 1.25s; } .intro .d2 { animation-delay: 1.38s; } .intro .d3 { animation-delay: 1.51s; } .intro .d4 { animation-delay: 1.64s; }
+.intro .word { opacity: 0; animation: iword 1s ease 2s forwards; }
+.intro .itag { opacity: 0; animation: ifade .8s ease 2.5s forwards; }
+.intro .glow { opacity: 0; animation: ifade 1.4s ease 1.6s forwards; }
+@keyframes itile { to { opacity: 1; transform: scale(1); } }
+@keyframes idraw { to { stroke-dashoffset: 0; } }
+@keyframes ipop { to { opacity: 1; transform: none; } }
+@keyframes iword { from { opacity: 0; letter-spacing: .9em; } to { opacity: 1; letter-spacing: .42em; } }
+@keyframes ifade { to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .mwave i { animation: none; }
+  .intro .tile, .intro .roof, .intro .dot, .intro .word, .intro .itag, .intro .glow { animation: none; opacity: 1; transform: none; stroke-dashoffset: 0; }
+}
