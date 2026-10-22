@@ -1,0 +1,13 @@
+import type { MetadataRoute } from "next";
+export default function manifest(): MetadataRoute.Manifest {
+  return {
+    name: "Meora · Your family's brain", short_name: "Meora",
+    description: "Your family's memory in one safe place. Save by speaking, ask anytime. Free.",
+    start_url: "/", display: "standalone", background_color: "#1D2742", theme_color: "#1D2742",
+    icons: [
+      { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+      { src: "/icons/maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+    ],
+  };
+}
