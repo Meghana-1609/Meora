@@ -26,7 +26,7 @@ export function Ask({ q: q0 }: { q?: string }) {
   const [en, setEn] = useState("");
   const [thinking, setThinking] = useState(false);
   const [level, setLevel] = useState(0);
-  const smart = st.ai && st.settings.smartOn && canRecord();
+  const smart = st.ai && st.settings.smartOn && canRecord() && !canListen();
   const canSpeak = smart || canListen();
   const stopRef = useRef<() => void>(() => {});
   const qRef = useRef(""); const lastRun = useRef("");

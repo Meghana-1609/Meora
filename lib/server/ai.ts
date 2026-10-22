@@ -6,26 +6,38 @@ import { serverError } from "./events";
 export const aiReady = () => !!process.env.GEMINI_API_KEY;
 
 type Part = { text: string } | { inline_data: { mime_type: string; data: string } };
-// Newest model first; if Google retires or renames one, the next one is tried automatically.
-const TEXT_MODELS = () => [process.env.GEMINI_MODEL, "gemini-3.8-flash", "gemini-2.5-flash"].filter(Boolean) as string[];
+// Fast, proven model first (quick answers, good with voice); newer models are the backup.
+// If Google retires, renames, limits or slows a model, the next one is tried automatically.
+const TEXT_MODELS = () => [process.env.GEMINI_MODEL, "gemini-2.5-flash", "gemini-3.8-flash", "gemini-2.5-flash-lite"].filter(Boolean) as string[];
 const TTS_MODELS = () => [process.env.GEMINI_TTS_MODEL, "gemini-3.8-flash-tts", "gemini-3.8-flash-lite-tts", "gemini-2.5-flash-preview-tts"].filter(Boolean) as string[];
 
-async function callModels(models: string[], body: (model: string) => unknown, key: string, timeout = 25000) {
+const clean = (t: string) => t.replace(/key=[^\s&]+/g, "key=…").slice(0, 150);
+/** Tries each model in turn, each with a strict time limit, and never waits more than ~45 s in total. */
+async function callModels(models: string[], body: (model: string) => unknown, key: string, timeout = 15000) {
   let last: Response | null = null;
+  const started = Date.now();
   for (const model of [...new Set(models)]) {
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-      method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": key },
-      body: JSON.stringify(body(model)), signal: AbortSignal.timeout(timeout),
-    });
+    const left = 45000 - (Date.now() - started);
+    if (left < 4000) break;
+    let r: Response;
+    try {
+      r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+        method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": key },
+        body: JSON.stringify(body(model)), signal: AbortSignal.timeout(Math.min(timeout, left)),
+      });
+    } catch (e) {
+      // Too slow or no connection: note it on the admin page and try the next model.
+      void serverError(`gemini ${model}: ${clean(String((e as Error)?.name === "TimeoutError" ? "took too long" : (e as Error)?.message ?? e))}`);
+      continue;
+    }
     if (r.ok) return r;
     // Show Google's exact reason on the admin page (no keys or notes are included).
     const why = await r.clone().text().then((t) => { try { return JSON.parse(t)?.error?.message ?? t; } catch { return t; } }).catch(() => "");
-    void serverError(`gemini ${model} ${r.status}: ${String(why).replace(/key=[^\s&]+/g, "key=…").slice(0, 150)}`);
-    // Unknown, not allowed, or no free quota for this model (429) → try the next model.
+    void serverError(`gemini ${model} ${r.status}: ${clean(String(why))}`);
     if (!last || last.status !== 429) last = r;
-    if (![400, 403, 404, 429].includes(r.status)) break;
+    if (![400, 403, 404, 429, 500, 503].includes(r.status)) break;
   }
-  return last!;
+  return last ?? new Response(JSON.stringify({ error: { message: "timeout" } }), { status: 504 });
 }
 
 async function gemini(prompt: string, extra: Part[] = []): Promise<Record<string, unknown>> {
@@ -35,6 +47,7 @@ async function gemini(prompt: string, extra: Part[] = []): Promise<Record<string
   const think = (m: string) => (m.startsWith("gemini-2.5") ? { thinkingConfig: { thinkingBudget: 0 } } : m.startsWith("gemini-3") ? { thinkingConfig: { thinkingLevel: "low" } } : {});
   const r = await callModels(TEXT_MODELS(), (m) => ({ contents: [{ parts: [...extra, { text: prompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0, ...think(m) } }), key);
   if (r.status === 429) throw new HttpError(429, "Smart answers reached today's free limit. Plain search still works.");
+  if (r.status === 504) throw new HttpError(504, "Smart answers took too long. Please try again.");
   if (!r.ok) throw new HttpError(502, "Smart answers are not available right now.");
   const j = await r.json();
   const text = j?.candidates?.[0]?.content?.parts?.find((p: { text?: string }) => typeof p.text === "string")?.text ?? "{}";

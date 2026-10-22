@@ -32,7 +32,7 @@ export async function speakNatural(text: string, lang?: string) {
       audio.playbackRate = s.settings.rate || 1;
       await audio.play();
       return;
-    } catch { /* fall back to the phone's voice */ }
+    } catch { /* use the built-in voice instead */ }
   }
   if (my !== token) return;
   say(clean, scriptLang(clean, lang ?? s.settings.speech), s.settings.rate || 1);
@@ -41,5 +41,7 @@ export async function speakNatural(text: string, lang?: string) {
 export async function understand(blob: Blob): Promise<{ text: string; english: string; lang: string }> {
   const s = getState();
   const wav = await toWav(blob);
-  return aiCall({ task: "transcribe", audio: await blobToBase64(wav), mime: wav.type || "audio/webm", lang: `${s.settings.lang}; the person usually speaks ${s.settings.speech}` });
+  // Never leave people waiting: after 30 seconds, give up and let them speak again.
+  const slow = new Promise<never>((_, no) => setTimeout(() => no(Object.assign(new Error("took too long"), { status: 408 })), 30000));
+  return Promise.race([slow, aiCall<{ text: string; english: string; lang: string }>({ task: "transcribe", audio: await blobToBase64(wav), mime: wav.type || "audio/webm", lang: `${s.settings.lang}; the person usually speaks ${s.settings.speech}` })]);
 }

@@ -101,7 +101,7 @@ export const en = {
   understanding: "Understanding…",
   in_english: "In English",
   understood_as: "Understood as",
-  smart_fallback: "Smart voice isn't working now. Using the phone's voice.",
+  smart_fallback: "Let's try that again. Please speak once more.",
   help_title: "Help",
   help_hi: "Hi! I can help you use Meora. What would you like to know?",
   help_ph: "Type your question",
@@ -113,5 +113,6 @@ export const en = {
   help_c4: "Voice not working",
   family_sub_1: "Just you so far · invite your family below",
   invite_nudge: "Meora works best when your family is in it.",
+  voice_kept: "Your voice is saved as a clip. Add a few words if you like.",
 };
 export type Strings = typeof en;

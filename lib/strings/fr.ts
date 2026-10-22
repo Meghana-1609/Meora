@@ -102,7 +102,7 @@ export const fr: Partial<Strings> = {
   understanding: "Compréhension…",
   in_english: "En anglais",
   understood_as: "Compris",
-  smart_fallback: "La voix intelligente ne marche pas. Voix du téléphone utilisée.",
+  smart_fallback: "Réessayons. Parlez encore une fois, s’il vous plaît.",
   help_title: "Aide",
   help_hi: "Bonjour ! Je peux vous aider à utiliser Meora. Que voulez-vous savoir ?",
   help_ph: "Écrivez votre question",
@@ -114,4 +114,5 @@ export const fr: Partial<Strings> = {
   help_c4: "La voix ne marche pas",
   family_sub_1: "Vous seul pour l'instant · invitez votre famille ci-dessous",
   invite_nudge: "Meora fonctionne mieux avec toute la famille.",
+  voice_kept: "Votre voix est enregistrée en clip. Ajoutez quelques mots si vous voulez.",
 };

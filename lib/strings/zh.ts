@@ -102,7 +102,7 @@ export const zh: Partial<Strings> = {
   understanding: "正在理解…",
   in_english: "英文",
   understood_as: "理解为",
-  smart_fallback: "智能语音暂时不可用，改用手机语音。",
+  smart_fallback: "我们再试一次。请再说一遍。",
   help_title: "帮助",
   help_hi: "你好！我可以帮你使用 Meora。想了解什么？",
   help_ph: "输入你的问题",
@@ -114,4 +114,5 @@ export const zh: Partial<Strings> = {
   help_c4: "语音不工作",
   family_sub_1: "目前只有你 · 在下方邀请家人",
   invite_nudge: "家人都加入，Meora 才最好用。",
+  voice_kept: "你的声音已保存为语音片段。愿意的话可以加几句文字。",
 };

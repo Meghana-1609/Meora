@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Btn, Header, Icon, Page, Spinner, toast } from "../ui";
 import { t } from "../i18n";
 import { nav } from "../nav";
-import { deleteItem, getState, saveItem, uploadBlob, useApp } from "../store";
+import { aiCall, deleteItem, getState, saveItem, uploadBlob, useApp } from "../store";
 import { canListen, listen } from "@/lib/speech";
 import { canRecord, record } from "@/lib/recorder";
 import { stopSpeaking, understand } from "../voice";
@@ -29,7 +29,9 @@ export function Save({ topic: topic0, about: about0, answers, edit, mode }: { to
   const st = useApp((s) => s);
   const old = edit ? st.notes[edit] : undefined;
   const question = answers ? st.questions[answers] : undefined;
-  const smart = st.ai && st.settings.smartOn && canRecord();
+  // Hearing: the phone's own Google speech recognition (instant, reliable). Only phones without it
+  // send the recording to Gemini. Gemini then just adds the English copy (see Check).
+  const smart = st.ai && st.settings.smartOn && canRecord() && !canListen();
   const canSpeak = smart || canListen();
   const [phase, setPhase] = useState<Phase>(old ? "check" : "capture");
   const [text, setText] = useState(old?.data.text ?? "");
@@ -66,24 +68,25 @@ export function Save({ topic: topic0, about: about0, answers, edit, mode }: { to
         setThinking(true);
         try {
           const u = await understand(blob);
-          if (!u.text) { toast(t("mic_trouble")); return; }
+          if (!u.text) { keepClip(blob); return; }
           const said = (base ? base + " " : "") + u.text;
           const english = u.english && u.english !== u.text ? (base && en && sameWords(heard, base) ? en + " " : "") + u.english : "";
           setHeard(english ? said : ""); setEn(english); setText(said);
           setSrcLang(u.lang);
           track("smart_heard:" + (u.lang || "x").slice(0, 5));
         } catch (e) {
-          track("smart_failed"); trackError(`smart voice ${(e as { status?: number }).status ?? ""}: ${(e as Error).message}`); toast(t("smart_fallback"));
-          // fall back to the phone's own voice typing
-          if (canListen()) startPhone(base); else setTyping(true);
+          track("smart_failed"); trackError(`smart voice ${(e as { status?: number }).status ?? ""}: ${(e as Error).message}`);
+          // Nothing is lost: keep the recording as a voice clip on the note.
+          keepClip(blob);
         } finally { setThinking(false); }
       });
       return;
     }
     startPhone(base);
   };
+  const keepClip = (blob: Blob) => { setVoice({ blob, url: URL.createObjectURL(blob) }); setTyping(true); toast(t("voice_kept")); track("voice_kept"); };
   const startPhone = (base: string) => {
-    setRec(true);
+    setRec(true); setSrcLang(getState().settings.speech);
     stopRef.current = listen(getState().settings.speech, {
       text: (f, i) => { setText((base ? base + " " : "") + f); setInterim(i); },
       end: () => { setRec(false); setInterim(""); },
@@ -202,6 +205,19 @@ function Check(p: {
   const names = members.map((m) => m.name);
   const [topic, setTopic] = useState<TopicId>(p.old?.topic ?? p.topic0 ?? guessTopic(p.text));
   const [topicOpen, setTopicOpen] = useState(false);
+  // English copy: a quick text translation after speaking or typing in another language. Quiet on failure.
+  const [englishBusy, setEnglishBusy] = useState(false);
+  useEffect(() => {
+    const words = p.text.trim();
+    const other = /[^\u0000-\u024F\s\d.,!?'"()\-:;/&%₹$@#*+=]/.test(words) || (p.srcLang && !p.srcLang.startsWith("en"));
+    if (!words || p.en || !other || !st.ai || !st.settings.smartOn) return;
+    let live = true; setEnglishBusy(true);
+    aiCall<{ text: string }>({ task: "translate", text: words, to: "en" })
+      .then((r) => { const e = (r.text || "").trim(); if (live && e && e.toLowerCase() !== words.toLowerCase()) p.setEn(e); })
+      .catch(() => { track("english_copy_failed"); })
+      .finally(() => { if (live) setEnglishBusy(false); });
+    return () => { live = false; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const guessedAbout = useMemo(() => guessAbout(p.text, names), []); // eslint-disable-line react-hooks/exhaustive-deps
   const [about, setAbout] = useState<string[]>(p.old?.about ?? (p.about0 ? [p.about0] : guessedAbout));
   const [extraPeople, setExtraPeople] = useState<string[]>([]);
@@ -252,11 +268,11 @@ function Check(p: {
       <div className="card mt-3 !rounded-[1.1rem] p-4">
         <p className="sec">{t("you_said")}{p.srcLang && !p.srcLang.startsWith("en") ? ` · ${langName(p.srcLang)}` : ""}</p>
         <textarea rows={2} className="mt-1.5 min-h-[3.5rem] w-full resize-none bg-transparent text-[1.05rem] leading-snug outline-none [field-sizing:content]" value={p.text} onChange={(e) => p.setText(e.target.value)} aria-label={t("you_said")} id="said" />
-        {(p.en || (p.srcLang && !p.srcLang.startsWith("en"))) && (
+        {(p.en || englishBusy || (p.srcLang && !p.srcLang.startsWith("en"))) && (
           <>
             <div className="my-2 h-px bg-line" />
             <p className="sec">{t("in_english")}</p>
-            <textarea rows={2} className="mt-1.5 min-h-[3rem] w-full resize-none bg-transparent font-medium leading-snug outline-none [field-sizing:content]" value={p.en} onChange={(e) => p.setEn(e.target.value)} aria-label={t("in_english")} />
+            <textarea rows={2} className="mt-1.5 min-h-[3rem] w-full resize-none bg-transparent font-medium leading-snug outline-none [field-sizing:content]" value={p.en} onChange={(e) => p.setEn(e.target.value)} placeholder={englishBusy ? t("understanding") : ""} aria-label={t("in_english")} />
           </>
         )}
         <div className="mt-2 flex flex-wrap gap-2">
