@@ -21,9 +21,9 @@ async function callModels(models: string[], body: (model: string) => unknown, ke
     // Show Google's exact reason on the admin page (no keys or notes are included).
     const why = await r.clone().text().then((t) => { try { return JSON.parse(t)?.error?.message ?? t; } catch { return t; } }).catch(() => "");
     void serverError(`gemini ${model} ${r.status}: ${String(why).replace(/key=[^\s&]+/g, "key=…").slice(0, 150)}`);
-    if (r.status === 429) return r;
-    last = r;
-    if (![400, 403, 404].includes(r.status)) break; // only move on when this model is unknown or unavailable
+    // Unknown, not allowed, or no free quota for this model (429) → try the next model.
+    if (!last || last.status !== 429) last = r;
+    if (![400, 403, 404, 429].includes(r.status)) break;
   }
   return last!;
 }
@@ -31,7 +31,9 @@ async function callModels(models: string[], body: (model: string) => unknown, ke
 async function gemini(prompt: string, extra: Part[] = []): Promise<Record<string, unknown>> {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new HttpError(503, "Smart answers are not set up on this server.");
-  const r = await callModels(TEXT_MODELS(), () => ({ contents: [{ parts: [...extra, { text: prompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0 } }), key);
+  // Short "thinking" keeps answers fast (newer models think a lot by default).
+  const think = (m: string) => (m.startsWith("gemini-2.5") ? { thinkingConfig: { thinkingBudget: 0 } } : m.startsWith("gemini-3") ? { thinkingConfig: { thinkingLevel: "low" } } : {});
+  const r = await callModels(TEXT_MODELS(), (m) => ({ contents: [{ parts: [...extra, { text: prompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0, ...think(m) } }), key);
   if (r.status === 429) throw new HttpError(429, "Smart answers reached today's free limit. Plain search still works.");
   if (!r.ok) throw new HttpError(502, "Smart answers are not available right now.");
   const j = await r.json();
@@ -68,7 +70,7 @@ export async function aiTranscribe(audio: string, mime: string, hint: string) {
 1) "text": write exactly what was said, in the speaker's own language and script (Telugu words in Telugu script, English words in English). Remove repeated words, "umm", false starts.
 2) "english": the same meaning in short, natural, correct English.
 3) "lang": the main language code (like "te", "hi", "en").
-Only write words you clearly hear. Never guess, invent or complete sentences. If there is no clear speech (silence, noise, music, TV), return empty strings. The person's app language is "${hint}".
+Only write words you clearly hear. Never guess, invent or complete sentences. If there is no clear speech (silence, noise, music, TV), return empty strings. About the person (a hint only, they may still mix languages): app language and usual speaking language = "${hint}".
 Return JSON {"text": string, "english": string, "lang": string}.`, [{ inline_data: { mime_type: mime.split(";")[0], data: audio } }]);
   const text = String(out.text ?? "").trim();
   return { text, english: text ? String(out.english ?? "").trim() : "", lang: String(out.lang ?? "").slice(0, 8) };

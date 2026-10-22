@@ -11,7 +11,7 @@ import { findSecret } from "@/lib/secret";
 import { guessAbout, guessTopic, topic as topicOf, TOPICS } from "@/lib/topics";
 import { parseDate, parseTime, iso } from "@/lib/dates";
 import { speak } from "../helpers";
-import { track } from "../track";
+import { track, trackError } from "../track";
 import { SpeechLang, speechName as langName } from "../SpeechLang";
 import type { BlobRef, NoteData, Remind, Repeat, TopicId } from "@/lib/types";
 
@@ -72,8 +72,8 @@ export function Save({ topic: topic0, about: about0, answers, edit, mode }: { to
           setHeard(english ? said : ""); setEn(english); setText(said);
           setSrcLang(u.lang);
           track("smart_heard:" + (u.lang || "x").slice(0, 5));
-        } catch {
-          track("smart_failed"); toast(t("smart_fallback"));
+        } catch (e) {
+          track("smart_failed"); trackError(`smart voice ${(e as { status?: number }).status ?? ""}: ${(e as Error).message}`); toast(t("smart_fallback"));
           // fall back to the phone's own voice typing
           if (canListen()) startPhone(base); else setTyping(true);
         } finally { setThinking(false); }
@@ -129,8 +129,9 @@ export function Save({ topic: topic0, about: about0, answers, edit, mode }: { to
         </div>
       ) : (
         <div className="mt-5 text-center">
-          {smart ? <p className="mx-auto w-fit rounded-[.7rem] bg-card px-3 py-1.5 text-[0.85rem] text-soft shadow-[0_0_0_1px_var(--color-line)]"><Icon name="spark" size={14} className="inline -mt-0.5" /> {t("any_language")}</p>
-            : <SpeechLang onChange={() => { stop(); setTimeout(start, 250); }} />}
+          {/* Language button is always here. With smart voice it is a hint (mixing languages still works). */}
+          <SpeechLang onChange={() => { if (!smart && rec) { stop(); setTimeout(start, 250); } }} />
+          {smart && <p className="mx-auto mt-1.5 w-fit text-[0.8rem] text-soft"><Icon name="spark" size={13} className="inline -mt-0.5" /> {t("any_language")}</p>}
           <button onClick={rec ? stop : start} disabled={thinking} aria-label={rec ? t("stop") : t("speak_now")}
             className={`tap mx-auto mt-8 grid h-28 w-28 place-items-center rounded-full bg-navy text-paper ${rec ? "pulse" : ""}`}>
             {thinking ? <Spinner /> : <Icon name={rec ? "stop" : "mic"} size={42} />}

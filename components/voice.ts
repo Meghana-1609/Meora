@@ -41,5 +41,5 @@ export async function speakNatural(text: string, lang?: string) {
 export async function understand(blob: Blob): Promise<{ text: string; english: string; lang: string }> {
   const s = getState();
   const wav = await toWav(blob);
-  return aiCall({ task: "transcribe", audio: await blobToBase64(wav), mime: wav.type || "audio/webm", lang: s.settings.lang });
+  return aiCall({ task: "transcribe", audio: await blobToBase64(wav), mime: wav.type || "audio/webm", lang: `${s.settings.lang}; the person usually speaks ${s.settings.speech}` });
 }

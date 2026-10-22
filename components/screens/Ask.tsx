@@ -10,7 +10,7 @@ import { stopSpeaking, understand } from "../voice";
 import { search } from "@/lib/search";
 import { findSecret } from "@/lib/secret";
 import { colorOf, fmtDate, nameOf, phones, speak, translate } from "../helpers";
-import { track } from "../track";
+import { track, trackError } from "../track";
 import { SpeechLang } from "../SpeechLang";
 import type { NoteData, QuestionData } from "@/lib/types";
 
@@ -76,7 +76,7 @@ export function Ask({ q: q0 }: { q?: string }) {
           if (!u.text) { toast(t("mic_trouble")); return; }
           setQ(u.text); setEn(u.english !== u.text ? u.english : "");
           void run(u.text, u.english);
-        } catch { setThinking(false); toast(t("smart_fallback")); if (canListen()) startPhone(); }
+        } catch (e) { setThinking(false); track("smart_failed"); trackError(`smart voice ${(e as { status?: number }).status ?? ""}: ${(e as Error).message}`); toast(t("smart_fallback")); if (canListen()) startPhone(); }
       });
       return;
     }
@@ -108,7 +108,7 @@ export function Ask({ q: q0 }: { q?: string }) {
       </form>
       {rec && smart && <div className="mt-3 flex h-8 items-center justify-center gap-1.5" aria-hidden>{[0.5, 0.8, 1, 0.7, 0.9, 0.6, 0.8].map((b, i) => <span key={i} className="w-[4px] rounded-full bg-navy transition-all duration-100" style={{ height: 5 + level * 26 * b }} />)}</div>}
       {en && <p className="mt-1.5 px-1 text-[0.85rem] text-soft">{t("understood_as")}: “{en}”</p>}
-      {!smart && canListen() && <SpeechLang onChange={() => { stop(); setTimeout(start, 250); }} />}
+      {canSpeak && <SpeechLang onChange={() => { if (!smart && rec) { stop(); setTimeout(start, 250); } }} />}
       {smart && !rec && !en && !res && <p className="mt-2 px-1 text-center text-[0.82rem] text-soft"><Icon name="spark" size={13} className="inline -mt-0.5" /> {t("any_language")}</p>}
       {q.trim() && !rec && !res && !busy && <Btn className="mt-3" onClick={() => run(q)}><Icon name="ask" /> {t("ask")}</Btn>}
       {busy && <div className="mt-8 grid place-items-center"><Spinner /></div>}
