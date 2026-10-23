@@ -15,6 +15,7 @@ import { NoteScreen } from "./screens/Note";
 import { Emergency } from "./screens/Emergency";
 import { Family } from "./screens/Family";
 import { Families } from "./screens/Families";
+import { Notify } from "./screens/Notify";
 import { Privacy, Settings, Tour } from "./screens/Settings";
 import { More } from "./screens/More";
 import { AllTopics } from "./screens/Topics";
@@ -86,6 +87,7 @@ function Screen({ r }: { r: ReturnType<typeof useRoute> }) {
     case "emergency": return <Emergency person={r.person} />;
     case "family": return <Family />;
     case "families": return <Families />;
+    case "notify": return <Notify />;
     case "settings": return <Settings />;
     case "lang": return <LangScreen onDone={() => nav.back()} />;
     case "privacy": return <Privacy />;

@@ -13,6 +13,7 @@ export const TOPICS: Topic[] = [
   { id: "kids", icon: "school", bg: "#E8EBF5", fg: "#3D4C8A", words: ["school", "teacher", "class", "tuition", "fees", "fee", "homework", "exam", "bus", "college", "uniform", "స్కూల్", "టీచర్", "ఫీజు", "ట్యూషన్", "स्कूल", "टीचर", "फीस", "பள்ளி", "ஆசிரியர்", "escuela", "école", "مدرسة", "学校"] },
   { id: "vehicles", icon: "car", bg: "#EDEAE4", fg: "#5C5A55", words: ["car", "bike", "scooter", "vehicle", "puc", "pollution", "tyre", "tire", "petrol", "diesel", "rc", "licence", "license", "కారు", "బైక్", "బండి", "कार", "बाइक", "गाड़ी", "கார்", "coche", "voiture", "سيارة", "汽车"] },
   { id: "stories", icon: "story", bg: "#F1E6EA", fg: "#8C4A62", words: ["story", "remember when", "childhood", "used to", "village", "grandfather", "grandmother", "memory", "కథ", "చిన్నప్పుడు", "ఊరు", "कहानी", "बचपन", "गाँव", "கதை", "historia", "histoire", "قصة", "故事"] },
+  { id: "diary", icon: "book", bg: "#E4EAF4", fg: "#3F5A96", words: [] },
   { id: "other", icon: "dots", bg: "#EEEBE5", fg: "#5F6472", words: [] },
 ];
 export const topic = (id: TopicId) => TOPICS.find((t) => t.id === id) ?? TOPICS[TOPICS.length - 1];

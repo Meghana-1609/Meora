@@ -5,7 +5,7 @@ import { Avatar, Btn, Confirm, Group, Header, Icon, Label, Page, Row, Toggle, to
 import { t } from "../i18n";
 import { nav } from "../nav";
 import { addFamily, decide, invite, memberAction, syncNow, useApp } from "../store";
-import { famName, NameFamily } from "./Families";
+import { famName, NameFamily, spaceTab } from "./Families";
 import { JOIN_PICTURES } from "@/lib/pictures";
 import type { Member } from "@/lib/types";
 import { track } from "../track";
@@ -20,6 +20,7 @@ export function Family() {
   const [confirm, setConfirm] = useState<null | { text: string; yes: string; run: () => Promise<void> }>(null);
   const [renaming, setRenaming] = useState(false);
   const [naming, setNaming] = useState(false);
+  const solo = st.family?.kind === "me";
   // check for new join requests often while this page is open
   useEffect(() => { void syncNow(); const id = setInterval(() => void syncNow(), 5000); return () => clearInterval(id); }, []);
 
@@ -40,9 +41,10 @@ export function Family() {
 
   return (
     <Page>
-      <Header title={t("family")} onBack={() => nav.back()} />
-      <p className="px-1 text-[0.9rem] text-soft">{members.length === 1 ? t("family_sub_1") : t("family_sub", { n: members.length })}</p>
+      <Header title={spaceTab(st.family?.kind)} onBack={() => nav.back()} />
+      <p className="px-1 text-[0.9rem] text-soft">{solo ? t("only_you_space") : members.length === 1 ? t("family_sub_1") : t("family_sub", { n: members.length })}</p>
 
+      {!solo && <>
       <Label>{t("add_someone")}</Label>
       {!inv ? (
         <Group><Row icon="users" tint="#E4E8F2" fg="#1D2742" title={busy ? t("checking") : t("invite_member")} sub={t("invite_sub")} onClick={busy ? undefined : show} /></Group>
@@ -74,6 +76,8 @@ export function Family() {
         </>
       )}
 
+      </>}
+
       <Label>{t("members")} · {members.length}</Label>
       <Group>
         {members.map((m) => (
@@ -81,15 +85,15 @@ export function Family() {
         ))}
       </Group>
 
-      <Label>{t("your_families")}</Label>
-      <Group><Row icon="home" title={famName(st.cur ? st.sums[st.cur.fam] : undefined, Math.max(0, st.fams.findIndex((f) => f.fam === st.cur?.fam)))} sub={st.fams.length === 1 ? t("fams_sub_1") : t("fams_sub", { n: st.fams.length })} onClick={() => nav.push({ s: "families" })} /></Group>
+      <Label>{t("your_spaces")}</Label>
+      <Group><Row icon="home" title={famName(st.cur ? st.sums[st.cur.fam] : undefined, Math.max(0, st.fams.findIndex((f) => f.fam === st.cur?.fam)))} sub={st.fams.length === 1 ? t("spaces_sub_1") : t("spaces_sub", { n: st.fams.length })} onClick={() => nav.push({ s: "families" })} /></Group>
 
       <Label>{t("settings")}</Label>
       <Group>
         <Row icon="edit" title={t("rename")} onClick={() => setRenaming(true)} />
-        {st.cur && st.sums[st.cur.fam] && <Row icon="home" title={t("name_family")} onClick={() => setNaming(true)} />}
-        <Row icon="plus" title={t("another_family")} onClick={() => addFamily("home")} />
-        <Row icon="door" title={t("leave_family")} danger onClick={() => setConfirm({ text: t("leave_q"), yes: t("leave_family"), run: () => memberAction({ action: "leave" }) })} />
+        {st.cur && st.sums[st.cur.fam] && <Row icon="home" title={t("name_space")} onClick={() => setNaming(true)} />}
+        <Row icon="plus" title={t("another_space")} onClick={() => addFamily("kind")} />
+        <Row icon="door" title={solo ? t("delete_space") : t("leave_family")} danger onClick={() => setConfirm({ text: solo ? t("delete_space_q") : t("leave_q"), yes: solo ? t("delete_space") : t("leave_family"), run: () => memberAction({ action: "leave" }) })} />
       </Group>
       <div className="h-6" />
 

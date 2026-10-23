@@ -36,7 +36,7 @@ export function Settings() {
 
       <Label>{t("privacy_rem")}</Label>
       <Group>
-        <Row icon="bell" title={t("reminders")} sub={t("reminders_note")} onClick={() => nav.push({ s: "topic", id: "dates" })} />
+        <Row icon="bell" title={t("reminders")} sub={t("n_settings_sub")} onClick={() => nav.push({ s: "notify" })} />
         <Row icon={st.lock.kind === "bio" ? "finger" : "lock"} title={t("lock_setting")} sub={t("lock_" + st.lock.kind)} onClick={() => setLockOpen(true)} />
         {st.lock.kind !== "none" && <Row icon="lock" title={t("lock_now")} onClick={lockNow} />}
         <Row icon="phone" title={t("emergency_number")} right={<input className="field !w-20 !rounded-[.6rem] !py-1.5 text-center" inputMode="tel" value={s.emergency} onChange={(e) => saveSettings({ emergency: e.target.value.replace(/[^\d+]/g, "").slice(0, 6) })} aria-label={t("emergency_number")} />} />

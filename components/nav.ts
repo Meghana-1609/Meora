@@ -4,11 +4,11 @@ import { useSyncExternalStore } from "react";
 import type { TopicId } from "@/lib/types";
 
 export type Route =
-  | { s: "home" } | { s: "save"; topic?: TopicId; about?: string; answers?: string; edit?: string; mode?: "type" | "photo" | "voice" }
+  | { s: "home" } | { s: "save"; topic?: TopicId; about?: string; answers?: string; edit?: string; mode?: "type" | "photo" | "voice"; diary?: boolean; prompt?: string }
   | { s: "ask"; q?: string } | { s: "topic"; id: TopicId } | { s: "topics" } | { s: "note"; id: string } | { s: "emergency"; person?: string }
-  | { s: "family" } | { s: "families" } | { s: "settings" } | { s: "lang" } | { s: "privacy" } | { s: "questions" } | { s: "news" } | { s: "recovery" } | { s: "tour" } | { s: "more" };
+  | { s: "family" } | { s: "families" } | { s: "settings" } | { s: "lang" } | { s: "privacy" } | { s: "questions" } | { s: "news" } | { s: "recovery" } | { s: "tour" } | { s: "more" } | { s: "notify" };
 
-const TOPIC_IDS = ["health", "contacts", "where", "dates", "recipes", "home", "money", "kids", "vehicles", "stories", "other"];
+const TOPIC_IDS = ["health", "contacts", "where", "dates", "recipes", "home", "money", "kids", "vehicles", "stories", "diary", "other"];
 export function pathOf(r: Route): string {
   switch (r.s) {
     case "home": return "/";
@@ -17,6 +17,8 @@ export function pathOf(r: Route): string {
     case "lang": return "/settings/language";
     case "recovery": return "/settings/recovery";
     case "tour": return "/help";
+    case "notify": return "/settings/notifications";
+    case "save": return r.diary ? "/diary" : "/save";
     default: return `/${r.s}`;
   }
 }
@@ -28,6 +30,8 @@ export function routeOf(path: string): Route {
   if (a === "settings" && b === "language") return { s: "lang" };
   if (a === "settings" && b === "recovery") return { s: "recovery" };
   if (a === "help") return { s: "tour" };
+  if (a === "diary") return { s: "save", diary: true };
+  if (a === "settings" && b === "notifications") return { s: "notify" };
   const simple = ["save", "ask", "topics", "emergency", "family", "families", "settings", "privacy", "questions", "news", "more"];
   return simple.includes(a) ? ({ s: a } as Route) : { s: "home" };
 }

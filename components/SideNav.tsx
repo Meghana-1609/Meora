@@ -5,10 +5,11 @@ import { Avatar, Icon, Logo } from "./ui";
 import { t } from "./i18n";
 import { nav, type Route } from "./nav";
 import { useApp } from "./store";
-import { famName } from "./screens/Families";
+import { famName, spaceTab } from "./screens/Families";
 
 export function SideNav({ at }: { at: Route["s"] }) {
   const requests = useApp((s) => s.family?.requests.length ?? 0);
+  const kind = useApp((s) => s.family?.kind);
   const openQs = useApp((s) => Object.values(s.questions).filter((q) => !q.data.answer && q.data.by !== s.me?.id).length);
   const cur = useApp((s) => s.cur);
   const fams = useApp((s) => s.fams);
@@ -17,7 +18,7 @@ export function SideNav({ at }: { at: Route["s"] }) {
   const name = famName(cur ? sums[cur.fam] : undefined, Math.max(0, fams.findIndex((f) => f.fam === cur?.fam)));
 
   const tab = (s: Route["s"], icon: string, label: string, badge = 0) => {
-    const on = at === s || (s === "more" && ["more", "settings", "lang", "privacy", "questions", "news", "recovery", "emergency"].includes(at))
+    const on = at === s || (s === "more" && ["more", "settings", "lang", "privacy", "questions", "news", "recovery", "emergency", "notify"].includes(at))
       || (s === "home" && ["topic", "topics", "note"].includes(at)) || (s === "family" && at === "families");
     return (
       <button key={s} onClick={() => nav.tab({ s } as Route)} aria-current={on ? "page" : undefined} aria-label={label}
@@ -44,11 +45,11 @@ export function SideNav({ at }: { at: Route["s"] }) {
 
       {tab("home", "home", t("tab_home"))}
       {tab("ask", "ask", t("ask"))}
-      {tab("family", "users", t("family"), requests)}
+      {tab("family", kind === "me" ? "person" : "users", spaceTab(kind), requests)}
       {tab("more", "dots", t("tab_more"), openQs)}
 
       {cur && (
-        <button onClick={() => nav.push({ s: "families" })} aria-label={t("your_families")}
+        <button onClick={() => nav.push({ s: "families" })} aria-label={t("your_spaces")}
           className="tap mt-auto flex items-center gap-2.5 rounded-[1rem] max-lg:justify-center max-lg:py-2 lg:p-3 lg:shadow-[0_0_0_1px_var(--color-line)]">
           <Avatar name={name} color="#7F96C2" size={32} />
           <span className="hidden min-w-0 flex-1 text-start lg:block">

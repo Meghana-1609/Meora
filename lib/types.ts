@@ -1,4 +1,4 @@
-export type TopicId = "health" | "contacts" | "where" | "dates" | "recipes" | "home" | "money" | "kids" | "vehicles" | "stories" | "other";
+export type TopicId = "health" | "contacts" | "where" | "dates" | "recipes" | "home" | "money" | "kids" | "vehicles" | "stories" | "diary" | "other";
 export type Repeat = "once" | "daily" | "weekly" | "monthly" | "yearly";
 export type Remind = { repeat: Repeat; date?: string /* YYYY-MM-DD */; time?: string /* HH:MM */ };
 
@@ -20,7 +20,14 @@ export type NoteData = {
   confirmedAt: number;
   createdAt: number;
   createdBy: string;
+  /** diary: how the day felt */
+  mood?: Mood;
+  /** the daily question this answers */
+  q?: string;
 };
+export type Mood = "good" | "calm" | "okay" | "low" | "stressed";
+/** Who a space is for. Older families have no kind: they are "family". */
+export type SpaceKind = "family" | "friends" | "me";
 export type QuestionData = { kind: "question"; text: string; lang: string; at: number; by: string; answer?: { noteId: string; by: string; at: number } };
 export type ProfileData = {
   kind: "profile"; person: string; age?: string; blood?: string; allergies?: string; conditions?: string; meds?: string;
@@ -40,4 +47,4 @@ export type WireItem = {
 
 export type Member = { id: string; name: string; color: string; pub: JsonWebKey; canApprove: boolean; joined: number; removed?: boolean };
 export type JoinRequest = { id: string; name: string; created: number; pub: JsonWebKey };
-export type PublicFamily = { id: string; created: number; members: Member[]; requests: JoinRequest[] };
+export type PublicFamily = { id: string; created: number; members: Member[]; requests: JoinRequest[]; kind?: SpaceKind };

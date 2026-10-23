@@ -8,9 +8,11 @@ import { topic as topicOf } from "@/lib/topics";
 import { icsFor } from "@/lib/dates";
 import { colorOf, download, fmtDate, nameOf, phones, speak, translate } from "../helpers";
 import type { BlobRef } from "@/lib/types";
+import { MOODS } from "./Save";
 
 export function NoteScreen({ id }: { id: string }) {
   const n = useApp((s) => s.notes[id]);
+  const me = useApp((s) => s.me?.id);
   const lang = useApp((s) => s.settings.speech);
   const [ask, setAsk] = useState(false);
   const [tr, setTr] = useState<string | null>(null);
@@ -26,14 +28,15 @@ export function NoteScreen({ id }: { id: string }) {
         <span className="inline-flex items-center gap-1.5 rounded-[.6rem] px-2.5 py-1 text-[0.85rem] font-semibold" style={{ background: tp.bg, color: tp.fg }}>
           <Icon name={tp.icon} size={15} /> {t("t_" + tp.id)}{n.data.about.length ? ` · ${n.data.about.join(", ")}` : ""}
         </span>
-        <p className="mt-3 whitespace-pre-wrap text-[1.12rem] font-semibold leading-snug">{n.data.text}</p>
+        {n.data.q && <p className="mt-3 text-[.92rem] text-soft">“{n.data.q}”</p>}
+        <p className="mt-3 whitespace-pre-wrap text-[1.12rem] font-semibold leading-snug">{n.data.mood && <span className="me-1.5" aria-label={t("mood_" + n.data.mood)}>{MOODS.find((m) => m[0] === n.data.mood)?.[1]}</span>}{n.data.text}</p>
         {n.data.en && <p className="mt-2 rounded-[.8rem] bg-paper px-3 py-2 text-[.92rem]"><span className="text-[.78rem] font-semibold uppercase tracking-wide text-soft">{t("in_english")}</span><br />{n.data.en}</p>}
         {tr && <p className="mt-3 rounded-[.9rem] bg-paper p-3 text-[1rem]">{tr}</p>}
         {n.data.photo && <Media r={n.data.photo} kind="photo" />}
         {n.data.audio && <Media r={n.data.audio} kind="audio" />}
         <div className="mt-4 grid gap-1.5 text-[0.9rem] text-soft">
           <span className="flex items-center gap-2"><Avatar name={nameOf(n.by)} color={colorOf(n.by)} size={22} /> {t("saved_by", { name: nameOf(n.by), date: fmtDate(n.updated) })}</span>
-          <span className="flex items-center gap-2"><Icon name={n.vis ? "lock" : "eye"} size={17} /> {n.vis ? t("some_see", { names: visNames }) : t("everyone_sees")}</span>
+          <span className="flex items-center gap-2"><Icon name={n.vis ? "lock" : "eye"} size={17} /> {n.vis?.length === 1 && n.vis[0] === me ? t("only_you_see_note") : n.vis ? t("some_see", { names: visNames }) : t("everyone_sees")}</span>
           {n.data.remind && <span className="flex items-center gap-2"><Icon name="bell" size={17} /> {t("rep_" + n.data.remind.repeat)}{n.data.remind.date && n.data.remind.repeat !== "daily" ? ` · ${new Date(n.data.remind.date + "T00:00").toLocaleDateString()}` : ""} · {n.data.remind.time}</span>}
         </div>
       </div>

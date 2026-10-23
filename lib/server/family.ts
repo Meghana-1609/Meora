@@ -1,6 +1,6 @@
 import { createHash, randomBytes, randomInt } from "node:crypto";
 import { db, mutate, HttpError } from "./store";
-import type { Member, PublicFamily, Sealed, WireItem } from "../types";
+import type { Member, PublicFamily, Sealed, SpaceKind, WireItem } from "../types";
 
 type MemberRec = Member & { tokenHash: string };
 type ReqRec = { id: string; name: string; pub: JsonWebKey; tokenHash: string; created: number };
@@ -10,7 +10,12 @@ export type FamilyDoc = {
   grants: Record<string, Grant>; denied: string[];
   invite?: { code: number[]; token: string; expires: number };
   recovery?: string;
+  /** who the space is for; old families have none and are "family" */
+  kind?: SpaceKind;
 };
+/** Tell people's phones, without slowing down the request (loaded only when needed). */
+const tell = (d: FamilyDoc, to: string[], what: "new" | "asked" | "join", name: string, url?: string) =>
+  to.length ? import("./push").then((m) => m.notify(d, to, what, name, url)).catch(() => {}) : Promise.resolve();
 
 export const COLORS = ["#B08D57", "#7F96C2", "#8FAE8D", "#C48E7E", "#9C88B8", "#6FA3A0", "#C9A24A", "#8C9AAB", "#B87A8F", "#7E9B6B"];
 export const PICTURE_COUNT = 16;
@@ -41,7 +46,7 @@ const nextColor = (d: FamilyDoc) => COLORS.find((c) => !d.members.some((m) => !m
 
 export function publicView(d: FamilyDoc, me?: MemberRec): PublicFamily {
   return {
-    id: d.id, created: d.created, members: d.members.map(strip),
+    id: d.id, created: d.created, members: d.members.map(strip), ...(d.kind ? { kind: d.kind } : {}),
     requests: me?.canApprove ? d.requests.map((r) => ({ id: r.id, name: r.name, created: r.created, pub: r.pub })) : [],
   };
 }
@@ -62,10 +67,11 @@ export async function auth(req: Request) {
   return { d, me };
 }
 
-export async function createFamily(b: { name: unknown; pub: unknown; token: unknown }) {
+export async function createFamily(b: { name: unknown; pub: unknown; token: unknown; kind?: unknown }) {
   const name = cleanName(b.name), pub = checkPub(b.pub), token = checkToken(b.token);
+  const kind: SpaceKind = b.kind === "friends" || b.kind === "me" ? b.kind : "family";
   const fam = id(16), mid = id(8);
-  const d: FamilyDoc = { id: fam, created: Date.now(), members: [{ id: mid, name, color: COLORS[0], pub, canApprove: true, joined: Date.now(), tokenHash: hash(token) }], requests: [], grants: {}, denied: [] };
+  const d: FamilyDoc = { id: fam, created: Date.now(), kind, members: [{ id: mid, name, color: COLORS[0], pub, canApprove: true, joined: Date.now(), tokenHash: hash(token) }], requests: [], grants: {}, denied: [] };
   if (!(await db.insert(famKey(fam), d))) throw new HttpError(500, "Try again.");
   return { fam, member: mid, family: publicView(d, d.members[0]) };
 }
@@ -73,6 +79,7 @@ export async function createFamily(b: { name: unknown; pub: unknown; token: unkn
 /** A 3-picture code (and a QR link) that is valid for a day. */
 export async function invite(req: Request) {
   const { d } = await auth(req);
+  if (d.kind === "me") throw new HttpError(403, "This is your private space. No one else can join it.");
   if (d.invite && d.invite.expires > Date.now() + 3600e3) return { code: d.invite.code, link: `${d.id}.${d.invite.token}`, expires: d.invite.expires };
   for (let attempt = 0; attempt < 40; attempt++) {
     const pool = Array.from({ length: PICTURE_COUNT }, (_, i) => i);
@@ -108,11 +115,13 @@ export async function join(b: { code?: unknown; link?: unknown; name: unknown; p
     fam = f;
   } else throw wrong;
   const rid = id(10);
-  await mutate<FamilyDoc>(famKey(fam), (d) => {
+  const out = await mutate<FamilyDoc>(famKey(fam), (d) => {
+    if (d.kind === "me") throw new HttpError(403, "This is a private space.");
     d.requests = d.requests.filter((r) => r.created > Date.now() - 3 * 86400e3);
     if (d.requests.length >= 20) throw new HttpError(429, "Too many people are waiting. Ask your family to answer first.");
     d.requests.push({ id: rid, name, pub, tokenHash: hash(token), created: Date.now() });
   });
+  await tell(out, out.members.filter((m) => !m.removed && m.canApprove).map((m) => m.id), "join", name, "/family");
   return { fam, req: rid };
 }
 
@@ -193,6 +202,7 @@ export async function putItems(req: Request, list: unknown) {
   if (!Array.isArray(list) || list.length > 50) throw new HttpError(400, "Too many at once.");
   const ids = new Set(d.members.filter((m) => !m.removed).map((m) => m.id));
   const saved: WireItem[] = [];
+  const fresh: WireItem[] = [];
   for (const raw of list as WireItem[]) {
     if (!raw || !ITEM_ID.test(raw.id) || !["note", "question", "profile"].includes(raw.kind)) throw new HttpError(400, "Bad item.");
     const old = await db.getItem(d.id, raw.id);
@@ -211,6 +221,13 @@ export async function putItems(req: Request, list: unknown) {
       item = { id: raw.id, kind: raw.kind, by: me.id, updated, vis, box: checkSealed(raw.box), ...(keys ? { keys } : {}) };
     }
     await db.putItem(d.id, item); saved.push(item);
+    if (!old && !item.deleted && (item.kind === "note" || item.kind === "question")) fresh.push(item);
+  }
+  // Let the others know something new arrived (only those who can see it; never what it says).
+  for (const kind of ["note", "question"] as const) {
+    const to = new Set<string>();
+    for (const i of fresh.filter((x) => x.kind === kind)) for (const m of i.vis ?? [...ids]) if (m !== me.id && ids.has(m)) to.add(m);
+    await tell(d, [...to], kind === "note" ? "new" : "asked", me.name);
   }
   return { items: saved };
 }

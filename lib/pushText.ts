@@ -1,0 +1,18 @@
+// Words for phone notifications, in each person's language. The server sends these,
+// so they never contain what anyone saved: only names, counts and gentle prompts.
+type K = "new" | "asked" | "join" | "tap" | "diary_t" | "diary_b" | "q_t" | "week_t" | "week_b" | "rem_t" | "rem_b";
+const T: Record<string, Record<K, string>> = {
+  en: { new: "{name} saved a new memory", asked: "{name} asked the family a question", join: "{name} wants to join", tap: "Tap to see it.", diary_t: "How was your day?", diary_b: "Take a minute for yourself.", q_t: "Today's question", week_t: "Your week in Meora", week_b: "{n} new memories were saved this week.", rem_t: "Reminder", rem_b: "You have a reminder in Meora. Tap to see it." },
+  te: { new: "{name} ఒక కొత్త జ్ఞాపకం సేవ్ చేశారు", asked: "{name} కుటుంబాన్ని ఒక ప్రశ్న అడిగారు", join: "{name} చేరాలనుకుంటున్నారు", tap: "చూడటానికి టాప్ చేయండి.", diary_t: "ఈ రోజు ఎలా గడిచింది?", diary_b: "మీ కోసం ఒక్క నిమిషం తీసుకోండి.", q_t: "ఈ రోజు ప్రశ్న", week_t: "Meoraలో మీ వారం", week_b: "ఈ వారం {n} కొత్త జ్ఞాపకాలు సేవ్ అయ్యాయి.", rem_t: "రిమైండర్", rem_b: "Meoraలో మీకు ఒక రిమైండర్ ఉంది. చూడటానికి టాప్ చేయండి." },
+  hi: { new: "{name} ने एक नई याद सेव की", asked: "{name} ने परिवार से एक सवाल पूछा", join: "{name} जुड़ना चाहते हैं", tap: "देखने के लिए टैप करें।", diary_t: "आज का दिन कैसा रहा?", diary_b: "एक मिनट अपने लिए निकालिए।", q_t: "आज का सवाल", week_t: "Meora में आपका हफ़्ता", week_b: "इस हफ़्ते {n} नई यादें सेव हुईं।", rem_t: "रिमाइंडर", rem_b: "Meora में आपके लिए एक रिमाइंडर है। देखने के लिए टैप करें।" },
+  ta: { new: "{name} ஒரு புதிய நினைவைச் சேமித்தார்", asked: "{name} குடும்பத்திடம் ஒரு கேள்வி கேட்டார்", join: "{name} சேர விரும்புகிறார்", tap: "பார்க்கத் தட்டவும்.", diary_t: "இன்றைய நாள் எப்படி இருந்தது?", diary_b: "உங்களுக்காக ஒரு நிமிடம் எடுத்துக்கொள்ளுங்கள்.", q_t: "இன்றைய கேள்வி", week_t: "Meora-வில் உங்கள் வாரம்", week_b: "இந்த வாரம் {n} புதிய நினைவுகள் சேமிக்கப்பட்டன.", rem_t: "நினைவூட்டல்", rem_b: "Meora-வில் உங்களுக்கு ஒரு நினைவூட்டல் உள்ளது. பார்க்கத் தட்டவும்." },
+  es: { new: "{name} guardó un nuevo recuerdo", asked: "{name} le hizo una pregunta a la familia", join: "{name} quiere unirse", tap: "Toca para verlo.", diary_t: "¿Qué tal tu día?", diary_b: "Tómate un minuto para ti.", q_t: "La pregunta de hoy", week_t: "Tu semana en Meora", week_b: "Esta semana se guardaron {n} recuerdos nuevos.", rem_t: "Recordatorio", rem_b: "Tienes un recordatorio en Meora. Toca para verlo." },
+  fr: { new: "{name} a enregistré un nouveau souvenir", asked: "{name} a posé une question à la famille", join: "{name} veut rejoindre", tap: "Touchez pour le voir.", diary_t: "Comment s'est passée ta journée ?", diary_b: "Prends une minute pour toi.", q_t: "La question du jour", week_t: "Ta semaine dans Meora", week_b: "{n} nouveaux souvenirs ont été enregistrés cette semaine.", rem_t: "Rappel", rem_b: "Tu as un rappel dans Meora. Touche pour le voir." },
+  ar: { new: "حفظ {name} ذكرى جديدة", asked: "سأل {name} العائلة سؤالًا", join: "{name} يريد الانضمام", tap: "اضغط لرؤيتها.", diary_t: "كيف كان يومك؟", diary_b: "خذ دقيقة لنفسك.", q_t: "سؤال اليوم", week_t: "أسبوعك في Meora", week_b: "تم حفظ {n} ذكريات جديدة هذا الأسبوع.", rem_t: "تذكير", rem_b: "لديك تذكير في Meora. اضغط لرؤيته." },
+  zh: { new: "{name} 保存了一段新的回忆", asked: "{name} 向家人提了一个问题", join: "{name} 想要加入", tap: "点按查看。", diary_t: "今天过得怎么样？", diary_b: "给自己一分钟。", q_t: "今日问题", week_t: "你在 Meora 的一周", week_b: "本周保存了 {n} 段新回忆。", rem_t: "提醒", rem_b: "你在 Meora 有一个提醒。点按查看。" },
+};
+export function pushText(lang: string, k: K, vars: Record<string, string | number> = {}) {
+  let s = (T[lang] ?? T.en)[k];
+  for (const [a, b] of Object.entries(vars)) s = s.replaceAll(`{${a}}`, String(b));
+  return s;
+}

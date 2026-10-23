@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Btn, Header, Icon, Page, Spinner, toast } from "../ui";
-import { t } from "../i18n";
+import { t, LOCALE } from "../i18n";
 import { nav } from "../nav";
 import { aiCall, deleteItem, getState, saveItem, uploadBlob, useApp } from "../store";
 import { canListen, listen } from "@/lib/speech";
@@ -13,7 +13,9 @@ import { parseDate, parseTime, iso } from "@/lib/dates";
 import { speak } from "../helpers";
 import { track, trackError } from "../track";
 import { SpeechLang, speechName as langName } from "../SpeechLang";
-import type { BlobRef, NoteData, Remind, Repeat, TopicId } from "@/lib/types";
+import type { BlobRef, Mood, NoteData, Remind, Repeat, TopicId } from "@/lib/types";
+
+export const MOODS: [Mood, string][] = [["good", "😊"], ["calm", "😌"], ["okay", "😐"], ["low", "😔"], ["stressed", "😤"]];
 
 type Phase = "capture" | "check" | "blocked" | "saved";
 
@@ -25,7 +27,7 @@ function sameWords(a: string, b: string) {
   return A.filter((x) => B.has(x)).length / A.length >= 0.5;
 }
 
-export function Save({ topic: topic0, about: about0, answers, edit, mode }: { topic?: TopicId; about?: string; answers?: string; edit?: string; mode?: "type" | "photo" | "voice" }) {
+export function Save({ topic: topic0, about: about0, answers, edit, mode, diary, prompt }: { topic?: TopicId; about?: string; answers?: string; edit?: string; mode?: "type" | "photo" | "voice"; diary?: boolean; prompt?: string }) {
   const st = useApp((s) => s);
   const old = edit ? st.notes[edit] : undefined;
   const question = answers ? st.questions[answers] : undefined;
@@ -102,7 +104,7 @@ export function Save({ topic: topic0, about: about0, answers, edit, mode }: { to
   if (phase === "blocked") return <Blocked kind={secretKind} onFix={() => { setText(""); setEn(""); setPhase("capture"); setTyping(true); }} />;
   if (phase === "saved" && savedId) return <Saved id={savedId} onAnother={() => { setText(""); setEn(""); setPhoto(null); setVoice(null); setSavedId(null); setPhase("capture"); }} />;
   if (phase === "check") return (
-    <Check old={old?.data} oldVis={old?.vis ?? null} id={edit} text={text} setText={setText} en={en} setEn={setEnByHand} srcLang={srcLang} topic0={topic0} about0={about0} photo={photo} voice={voice} question={question?.data.text}
+    <Check old={old?.data} oldVis={old?.vis ?? null} id={edit} text={text} setText={setText} en={en} setEn={setEnByHand} srcLang={srcLang} topic0={topic0} about0={about0} photo={photo} voice={voice} question={question?.data.text} diary={diary || old?.data.topic === "diary"} prompt={prompt ?? old?.data.q}
       onBack={() => (old ? nav.back() : setPhase("capture"))}
       onBlocked={(k) => { setSecretKind(k); setText(""); setEn(""); setPhase("blocked"); }}
       onSaved={(id) => { setSavedId(id); setPhase("saved"); }}
@@ -112,8 +114,10 @@ export function Save({ topic: topic0, about: about0, answers, edit, mode }: { to
 
   return (
     <Page>
-      <Header title={question ? t("answer") : t("save")} onBack={() => nav.back()} />
+      <Header title={diary ? t("diary_title") : question || prompt ? t("answer") : t("save")} onBack={() => nav.back()} />
+      {diary && <p className="px-1 text-[0.9rem] text-soft">{new Date().toLocaleDateString(LOCALE(), { weekday: "long", day: "numeric", month: "long" })} · <Icon name="lock" size={13} className="inline -mt-0.5" /> {t("only_me")}</p>}
       {question && <div className="card mt-2 !rounded-[1.1rem] p-4"><p className="sec">{t("family_asked")}</p><p className="mt-1 font-medium">“{question.data.text}”</p></div>}
+      {prompt && <div className="mt-2 rounded-[1.1rem] bg-navy p-4 text-paper"><p className="text-[.74rem] font-bold uppercase tracking-[.1em] text-[#D4B98A]">{t("today_q")}</p><p className="mt-1 text-[1.05rem] font-medium leading-snug">{prompt}</p></div>}
       {topic0 && <p className="mt-1 px-1 text-[0.9rem] text-soft">{t("saving_in", { topic: t("t_" + topic0) })}</p>}
 
       <input ref={fileRef} type="file" accept="image/*" capture="environment" hidden onChange={async (e) => {
@@ -139,7 +143,7 @@ export function Save({ topic: topic0, about: about0, answers, edit, mode }: { to
             className={`tap mx-auto mt-8 grid h-28 w-28 place-items-center rounded-full bg-navy text-paper ${rec ? "pulse" : ""}`}>
             {thinking ? <Spinner /> : <Icon name={rec ? "stop" : "mic"} size={42} />}
           </button>
-          <p className="mt-9 text-[0.92rem] text-soft">{thinking ? t("understanding") : rec ? t("tap_stop") : t("tap_to_speak")}</p>
+          <p className="mt-9 text-[0.92rem] text-soft">{thinking ? t("understanding") : rec ? t("tap_stop") : diary ? t("diary_hint") : t("tap_to_speak")}</p>
           {rec && (smart
             ? <div className="mt-4 flex h-10 items-center justify-center gap-1.5" aria-hidden>{bars.map((b, i) => <span key={i} className="w-[4px] rounded-full bg-navy transition-all duration-100" style={{ height: 6 + level * 34 * b }} />)}</div>
             : <div className="wave mt-4 flex h-10 items-center justify-center gap-1.5" aria-hidden>{[14, 26, 38, 20, 34, 24, 14, 30, 20].map((h, i) => <b key={i} style={{ height: h, animationDelay: `${i * 0.09}s` }} />)}</div>)}
@@ -196,14 +200,15 @@ async function shrink(f: File): Promise<Blob> {
 
 function Check(p: {
   old?: NoteData; oldVis: string[] | null; id?: string; text: string; setText: (s: string) => void; en: string; setEn: (s: string) => void; srcLang: string; topic0?: TopicId; about0?: string;
-  photo: { blob: Blob } | null; voice: { blob: Blob } | null; question?: string; answers?: string;
+  photo: { blob: Blob } | null; voice: { blob: Blob } | null; question?: string; answers?: string; diary?: boolean; prompt?: string;
   onBack: () => void; onBlocked: (k: string) => void; onSaved: (id: string) => void;
 }) {
   const st = useApp((s) => s);
   const members = (st.family?.members ?? []).filter((m) => !m.removed);
   const others = members.filter((m) => m.id !== st.me?.id);
   const names = members.map((m) => m.name);
-  const [topic, setTopic] = useState<TopicId>(p.old?.topic ?? p.topic0 ?? guessTopic(p.text));
+  const [topic, setTopic] = useState<TopicId>(p.old?.topic ?? p.topic0 ?? (p.diary ? "diary" : p.prompt ? "stories" : guessTopic(p.text)));
+  const [mood, setMood] = useState<Mood | undefined>(p.old?.mood);
   const [topicOpen, setTopicOpen] = useState(false);
   // English copy: a quick text translation after speaking or typing in another language. Quiet on failure.
   const [englishBusy, setEnglishBusy] = useState(false);
@@ -222,7 +227,8 @@ function Check(p: {
   const [about, setAbout] = useState<string[]>(p.old?.about ?? (p.about0 ? [p.about0] : guessedAbout));
   const [extraPeople, setExtraPeople] = useState<string[]>([]);
   const [adding, setAdding] = useState(false);
-  const [vis, setVis] = useState<"all" | "some" | "hide">(p.oldVis ? "some" : "all");
+  const onlyMe = (v: string[] | null) => !!v && v.length === 1 && v[0] === st.me?.id;
+  const [vis, setVis] = useState<"all" | "some" | "hide" | "me">(p.old ? (onlyMe(p.oldVis) ? "me" : p.oldVis ? "some" : "all") : p.diary ? "me" : "all");
   const [picked, setPicked] = useState<string[]>(p.oldVis?.filter((x) => x !== st.me?.id) ?? []);
   const suggest = useMemo(() => suggestRemind(p.text, topic), [p.text, topic]);
   const [remind, setRemind] = useState<Remind | null>(p.old ? p.old.remind ?? null : suggest);
@@ -244,16 +250,16 @@ function Check(p: {
       const history = p.old ? [...p.old.history, { text: p.old.text, by: getState().notes[p.id!]?.by ?? me, at: getState().notes[p.id!]?.updated ?? now }].slice(-10) : [];
       const data: NoteData = {
         kind: "note", text: text || (p.photo ? t("photo") : t("voice_note")), ...(english && english !== text ? { en: english } : {}), lang: p.srcLang || st.settings.speech, topic, about,
-        ...(remind ? { remind } : {}), ...(photo ? { photo } : {}), ...(audio ? { audio } : {}),
+        ...(remind && !p.diary ? { remind } : {}), ...(photo ? { photo } : {}), ...(audio ? { audio } : {}), ...(mood ? { mood } : {}), ...(p.prompt ? { q: p.prompt } : {}),
         history, confirmedAt: now, createdAt: p.old?.createdAt ?? now, createdBy: p.old?.createdBy ?? me,
       };
-      const visList = vis === "all" ? null : vis === "some" ? [...picked, me] : members.filter((m) => !picked.includes(m.id)).map((m) => m.id);
+      const visList = vis === "all" ? null : vis === "me" ? [me] : vis === "some" ? [...picked, me] : members.filter((m) => !picked.includes(m.id)).map((m) => m.id);
       const id = await saveItem(data, { id: p.id, vis: visList });
       if (p.answers) {
         const q = getState().questions[p.answers];
         if (q) await saveItem({ ...q.data, answer: { noteId: id, by: me, at: now } }, { id: p.answers });
       }
-      track(p.old ? "edited" : p.answers ? "answered" : "saved"); track("topic:" + topic);
+      track(p.old ? "edited" : p.answers ? "answered" : p.diary ? "diary_saved" : p.prompt ? "daily_answered" : "saved"); track("topic:" + topic);
       if (p.photo) track("with_photo"); if (p.voice) track("with_voice"); if (remind) track("with_reminder"); if (vis !== "all") track("private_note");
       p.onSaved(id);
     } catch (e) { toast((e as Error).message === "offline" ? t("need_internet_media") : t("error")); }
@@ -263,8 +269,8 @@ function Check(p: {
 
   return (
     <Page>
-      <Header title={p.old ? t("edit") : t("check_save")} onBack={p.onBack} />
-      {p.question && <p className="mt-1 text-soft">“{p.question}”</p>}
+      <Header title={p.old ? t("edit") : p.diary ? t("diary_title") : t("check_save")} onBack={p.onBack} />
+      {(p.question || p.prompt) && <p className="mt-1 text-soft">“{p.question ?? p.prompt}”</p>}
       <div className="card mt-3 !rounded-[1.1rem] p-4">
         <p className="sec">{t("you_said")}{p.srcLang && !p.srcLang.startsWith("en") ? ` · ${langName(p.srcLang)}` : ""}</p>
         <textarea rows={2} className="mt-1.5 min-h-[3.5rem] w-full resize-none bg-transparent text-[1.05rem] leading-snug outline-none [field-sizing:content]" value={p.text} onChange={(e) => p.setText(e.target.value)} aria-label={t("you_said")} id="said" />
@@ -281,6 +287,20 @@ function Check(p: {
         </div>
       </div>
 
+      {p.diary && (
+        <>
+          <p className="sec mt-5">{t("mood_q")}</p>
+          <div className="mt-2 grid grid-cols-5 gap-1.5">
+            {MOODS.map(([m, e]) => (
+              <button key={m} className="chip tap !min-h-[4rem] flex-col !gap-0.5 !px-1 !text-[.78rem]" aria-pressed={mood === m} onClick={() => setMood(mood === m ? undefined : m)}>
+                <span className="text-[1.45rem] leading-none" aria-hidden>{e}</span>{t("mood_" + m)}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      {!p.diary && <>
       <p className="sec mt-5">{t("topic")} {!p.old && !p.topic0 && <span className="normal-case tracking-normal">· {t("we_guessed")}</span>}</p>
       <div className="mt-2 flex flex-wrap gap-2">
         {(topicOpen ? TOPICS : [tp]).map((x) => (
@@ -303,16 +323,19 @@ function Check(p: {
           </form>
         ) : <button className="chip tap" onClick={() => setAdding(true)} aria-label={t("add_name")}><Icon name="plus" size={17} /> {t("add_name")}</button>}
       </div>
+      </>}
 
       {others.length > 0 && (
         <>
           <p className="sec mt-5">{t("who_can_see")}</p>
           <div className="mt-2 flex flex-wrap gap-2">
-            <button className="chip tap" aria-pressed={vis === "all"} onClick={() => setVis("all")}>{t("everyone")}</button>
-            <button className="chip tap" aria-pressed={vis === "some"} onClick={() => setVis("some")}>{t("only_some")}</button>
-            <button className="chip tap" aria-pressed={vis === "hide"} onClick={() => setVis("hide")}>{t("hide_from")}</button>
+            <button className="chip tap" aria-pressed={vis === "me"} onClick={() => setVis("me")}><Icon name="lock" size={16} /> {t("only_me")}</button>
+            <button className="chip tap" aria-pressed={vis === "all"} onClick={() => setVis("all")}>{p.diary ? t("share_with_all") : t("everyone")}</button>
+            {!p.diary && <button className="chip tap" aria-pressed={vis === "some"} onClick={() => setVis("some")}>{t("only_some")}</button>}
+            {!p.diary && <button className="chip tap" aria-pressed={vis === "hide"} onClick={() => setVis("hide")}>{t("hide_from")}</button>}
           </div>
-          {vis !== "all" && (
+          {vis === "me" && <p className="mt-2 px-1 text-[0.88rem] text-soft">{t("only_me_sub")}</p>}
+          {(vis === "some" || vis === "hide") && (
             <div className="card mt-2 p-3">
               <p className="text-[0.92rem] text-soft">{vis === "some" ? t("pick_who_sees") : t("pick_who_not")}</p>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -323,16 +346,18 @@ function Check(p: {
         </>
       )}
 
+      {!p.diary && <>
       <p className="sec mt-5">{t("remind")}</p>
       <div className="mt-2 flex flex-wrap gap-2">
         <button className="chip tap" aria-pressed={!remind} onClick={() => setRemind(null)}>{t("no")}</button>
         <button className="chip tap" aria-pressed={!!remind} onClick={() => setRemind(remind ?? suggest ?? { repeat: "once", date: iso(new Date(Date.now() + 86400e3)), time: "09:00" })}><Icon name="bell" size={17} /> {t("yes")}</button>
       </div>
       {remind && <RemindEditor r={remind} onChange={setRemind} />}
+      </>}
 
       <div className="mt-auto pt-6">
         <Btn kind="green" onClick={save} disabled={busy || (!p.text.trim() && !p.photo && !p.voice) || (vis === "some" && !picked.length)} className="!text-[1.04rem]">
-          {busy ? <Spinner /> : <><Icon name="check" /> {t("save")}</>}
+          {busy ? <Spinner /> : <><Icon name="check" /> {p.diary ? t("save_day") : t("save")}</>}
         </Btn>
       </div>
     </Page>
@@ -395,7 +420,7 @@ function Saved({ id, onAnother }: { id: string; onAnother: () => void }) {
       <div className="mt-16 grid place-items-center text-center">
         <span className="grid h-24 w-24 place-items-center rounded-full bg-leaf-soft text-leaf"><Icon name={undone ? "undo" : "check"} size={50} /></span>
         <h1 className="mt-5 text-[1.35rem] font-semibold">{undone ? t("deleted") : t("saved_in", { topic: tp ? t("t_" + tp.id) : "" })}</h1>
-        {!undone && <p className="mt-2 text-[1.05rem] text-soft">{n?.vis ? t("some_see_saved") : t("family_sees")}</p>}
+        {!undone && <p className="mt-2 text-[1.05rem] text-soft">{n?.vis?.length === 1 ? t("only_you_see") : n?.vis ? t("some_see_saved") : t("family_sees")}</p>}
         {!undone && <button className="chip tap mt-4" onClick={async () => { await deleteItem(id); setUndone(true); }}><Icon name="undo" size={17} /> {t("undo")}</button>}
       </div>
       <div className="mt-auto grid gap-2.5 pt-8">

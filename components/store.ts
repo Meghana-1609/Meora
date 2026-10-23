@@ -5,14 +5,16 @@ import { useSyncExternalStore } from "react";
 import * as C from "@/lib/crypto";
 import * as L from "@/lib/local";
 import { PICTURES, RECOVERY_LENGTH } from "@/lib/pictures";
-import type { BlobRef, Member, NoteData, Payload, ProfileData, PublicFamily, QuestionData, Sealed, WireItem } from "@/lib/types";
+import type { BlobRef, Member, NoteData, Payload, ProfileData, PublicFamily, QuestionData, Sealed, SpaceKind, WireItem } from "@/lib/types";
 
 export type UiLang = "en" | "te" | "hi" | "ta" | "es" | "fr" | "ar" | "zh";
 export type Settings = {
   lang: UiLang; speech: string; text: 1 | 2 | 3; readAloud: boolean; rate: number; simple: boolean; dark: boolean;
   defaultVis: "all"; smartOn: boolean; emergency: string; chosen: boolean; toured: boolean;
+  /** phone notifications: on/off, what to get, and the diary time */
+  notify?: NotifySettings;
 };
-type FamRef = { fam: string; member: string; token: string };
+export type FamRef = { fam: string; member: string; token: string };
 type Keys = { fk: CryptoKey; priv: CryptoKey; pub: JsonWebKey };
 type Lock = { kind: "bio" | "pics" | "none"; cred?: string; hash?: string; salt?: string };
 type Pending = { fam: string; req: string; token: string; name: string; priv: CryptoKey; pub: JsonWebKey; denied?: boolean };
@@ -29,8 +31,9 @@ export type State = {
   /** A small summary of each family on this phone, so the families page can show them all. */
   sums: Record<string, FamSum>;
 };
-export type WelcomeStep = "intro" | "home" | "start" | "join";
-export type FamSum = { nick?: string; first: string; people: number; notes: number; who: { n: string; c: string }[]; at: number };
+export type WelcomeStep = "intro" | "home" | "kind" | "start" | "join";
+export type FamSum = { nick?: string; first: string; people: number; notes: number; who: { n: string; c: string }[]; at: number; kind?: SpaceKind };
+export type NotifySettings = { on: boolean; prefs: { rem: boolean; diary: boolean; q: boolean; family: boolean; week: boolean }; diaryAt: string };
 
 const region = () => {
   if (typeof navigator === "undefined") return "";
@@ -88,6 +91,12 @@ async function api<T>(path: string, init?: { method?: string; body?: unknown; au
     throw new ApiError(r.status, j.error ?? "error");
   }
   return j as T;
+}
+/** Same as api(), but signed in as another space on this phone (for notification settings). */
+export async function apiAs<T>(ref: FamRef, path: string, body: unknown): Promise<T> {
+  const r = await fetch(path, { method: "POST", headers: { "content-type": "application/json", "x-fam": ref.fam, "x-member": ref.member, "x-token": ref.token }, body: JSON.stringify(body), cache: "no-store" });
+  if (!r.ok) throw new ApiError(r.status, "error");
+  return r.json() as Promise<T>;
 }
 const fam = (action: string, b: Record<string, unknown> = {}, auth = true) => api<Record<string, unknown>>("/api/family", { body: { action, ...b }, auth });
 
@@ -153,6 +162,7 @@ async function openFamily(ref: FamRef) {
   timer = setInterval(() => { if (!document.hidden && state.stage === "app") void syncNow(); }, 20000);
   void saveSum();
   void syncNow();
+  void import("./push").then((m) => m.refreshPush()).catch(() => {});
 }
 
 /** Remember this family's name, people and count, so the families page can show it while another family is open. */
@@ -160,7 +170,7 @@ async function saveSum() {
   const ref = state.cur, fam = state.family; if (!ref || !fam) return;
   const people = fam.members.filter((m) => !m.removed).sort((a, b) => a.joined - b.joined);
   const old = state.sums[ref.fam];
-  const sum: FamSum = { nick: old?.nick, first: people[0]?.name ?? "", people: people.length, notes: Object.keys(state.notes).length, who: people.slice(0, 5).map((m) => ({ n: m.name, c: m.color })), at: old?.at ?? 0 };
+  const sum: FamSum = { nick: old?.nick, first: people[0]?.name ?? "", people: people.length, notes: Object.keys(state.notes).length, who: people.slice(0, 5).map((m) => ({ n: m.name, c: m.color })), at: old?.at ?? 0, ...(fam.kind ? { kind: fam.kind } : {}) };
   sum.at = JSON.stringify({ ...sum, at: 0 }) === JSON.stringify({ ...old, at: 0 }) ? sum.at : Date.now();
   if (old && sum.at === old.at) return;
   setState({ sums: { ...state.sums, [ref.fam]: sum } });
@@ -219,6 +229,7 @@ export function syncNow(): Promise<void> {
       if (famChanged) await decryptAll(Object.values(wire)); else if (fresh.length) await decryptAll(fresh);
       await L.set(`cache:${state.cur!.fam}`, { since, wire, family: r.family });
       void saveSum();
+      if (fresh.length) void import("./push").then((m) => m.refreshPush()).catch(() => {});
     } catch { /* offline: keep what we have */ }
     finally { syncing = null; }
   })());
@@ -253,9 +264,9 @@ async function adopt(ref: FamRef, k: Keys, family: PublicFamily) {
   await openFamily(ref);
 }
 
-export async function startFamily(name: string) {
+export async function startFamily(name: string, kind: SpaceKind = "family") {
   const fk = await C.newFamilyKey(); const dk = await C.newDeviceKeys(); const token = newToken();
-  const r = await fam("create", { name, pub: dk.pub, token }, false) as { fam: string; member: string; family: PublicFamily };
+  const r = await fam("create", { name, pub: dk.pub, token, kind }, false) as { fam: string; member: string; family: PublicFamily };
   await adopt({ fam: r.fam, member: r.member, token }, { fk, priv: dk.priv, pub: dk.pub }, r.family);
   await makeRecovery();
   setState({ stage: "recovery" });

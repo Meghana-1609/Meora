@@ -1,12 +1,16 @@
 "use client";
 import { track } from "../track";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Avatar, Group, Icon, Label, Logo, Row } from "../ui";
 import { t, LOCALE } from "../i18n";
 import { nav } from "../nav";
 import { useApp } from "../store";
 import { TOPICS } from "@/lib/topics";
-import { nextTime, daysUntil } from "@/lib/dates";
+import { nextTime, daysUntil, iso } from "@/lib/dates";
+import { questionFor } from "@/lib/questions";
+import { pushSupported } from "../push";
+import type { Rec } from "../store";
+import type { NoteData } from "@/lib/types";
 import { LangPill } from "./Onboard";
 import type { TopicId } from "@/lib/types";
 
@@ -46,6 +50,21 @@ export function Home() {
   const alone = (family?.members.length ?? 1) <= 1;
   const starters: [string, string, TopicId][] = [["s_med", "health", "health"], ["s_doc", "phone", "contacts"], ["s_where", "key", "where"], ["s_bday", "cal", "dates"]];
   const tiles = TOPICS.filter((tp) => tp.id !== "other").slice(0, 8);
+  const ymd = iso(now);
+  const myId = me?.id;
+  const todayQ = questionFor(family?.kind, ymd, s.lang);
+  const [skip, setSkip] = useState(() => read("meora_qskip"));
+  const [noNotify, setNoNotify] = useState(() => read("meora_notify_card") === "1");
+  const showQ = !s.simple && skip !== ymd && !Object.values(notes).some((n) => n.data.q === todayQ && iso(new Date(n.data.createdAt)) === ymd);
+  const diaryToday = Object.values(notes).some((n) => n.data.topic === "diary" && n.data.createdBy === myId && iso(new Date(n.data.createdAt)) === ymd);
+  const notifyCard = !empty && !noNotify && !s.notify?.on && pushSupported();
+  const memory = useMemo(() => pickMemory(Object.values(notes), now), [notes, ymd]); // eslint-disable-line react-hooks/exhaustive-deps
+  const streak = useMemo(() => {
+    const days = new Set(Object.values(notes).filter((n) => n.data.createdBy === myId).map((n) => iso(new Date(n.data.createdAt))));
+    const d = new Date(now); if (!days.has(iso(d))) d.setDate(d.getDate() - 1);
+    let k = 0; while (days.has(iso(d)) && k < 999) { k++; d.setDate(d.getDate() - 1); }
+    return k;
+  }, [notes, ymd, myId]); // eslint-disable-line react-hooks/exhaustive-deps
   const recent = useMemo(() => Object.values(notes).sort((a, b) => b.updated - a.updated).slice(0, 3), [notes]);
 
   return (
@@ -57,6 +76,7 @@ export function Home() {
         <p className="col-span-2 mt-6 text-[0.86rem] text-soft md:col-span-1 md:col-start-1 md:row-start-1 md:mt-0 md:text-[.95rem]">{today}</p>
         <h1 className="col-span-2 mt-0.5 text-[1.35rem] font-semibold leading-tight tracking-[-.01em] md:col-span-1 md:col-start-1 md:row-start-2 md:text-[1.9rem]">{hello}</h1>
       </header>
+      {streak >= 2 && <span className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-leaf-soft px-3 py-1 text-[.85rem] font-semibold text-leaf"><Icon name="sprout" size={15} />{t("streak", { n: streak })}</span>}
       {(!online || outbox > 0) && <p className="mt-3 rounded-[.8rem] bg-brass-soft px-3.5 py-2 text-[.88rem] font-medium">{!online ? t("offline") : t("sending", { n: outbox })}</p>}
 
       <button onClick={() => nav.push({ s: "ask" })} className="tap mt-4 flex w-full items-center gap-3 rounded-[1rem] bg-navy py-1.5 pe-1.5 ps-4 text-start text-paper shadow-[0_12px_26px_-18px_rgb(19_26_48/.9)] md:mt-5 md:rounded-[1.15rem] md:py-2 md:pe-2 md:ps-5">
@@ -81,7 +101,38 @@ export function Home() {
         </>
       )}
 
-      {alone && !empty && requests.length === 0 && (
+      {/* Today's question: one gentle question a day, the same for everyone in the space. */}
+      {showQ && (
+        <div className="mt-4 rounded-[1.2rem] bg-[linear-gradient(160deg,#26304F,#1D2742)] p-4 text-[#F3F1EC] md:p-5">
+          <p className="text-[.72rem] font-bold uppercase tracking-[.12em] text-[#D4B98A]">{t("today_q")}</p>
+          <p className="mt-1.5 text-[1.1rem] font-medium leading-snug">{todayQ}</p>
+          <div className="mt-3 flex gap-2">
+            <button onClick={() => { track("daily_q_open"); nav.push({ s: "save", prompt: todayQ }); }} className="tap flex items-center gap-1.5 rounded-[.8rem] bg-[#F3F1EC] px-3.5 py-2 text-[.92rem] font-semibold text-[#1D2742]"><Icon name="mic" size={16} />{t("answer_voice")}</button>
+            <button onClick={() => { setSkip(ymd); store("meora_qskip", ymd); track("daily_q_skip"); }} className="tap rounded-[.8rem] border border-white/20 px-3.5 py-2 text-[.92rem]">{t("skip")}</button>
+          </div>
+        </div>
+      )}
+
+      {/* A memory from the past, to bring people back to what they saved. */}
+      {memory && (
+        <Group className="mt-2.5"><Row icon="clock" tint="#F3EBDC" fg="#8F6A2E" title={<span className="line-clamp-2">{short(memory.n.data.text, 80)}</span>}
+          sub={`${memory.when} · ${t("saved_by", { name: family?.members.find((m) => m.id === memory.n.by)?.name ?? "" })}`} onClick={() => { track("memory_open"); nav.push({ s: "note", id: memory.n.id }); }} /></Group>
+      )}
+
+      {/* The private diary: once a day. */}
+      {!s.simple && !diaryToday && (
+        <Group className="mt-2.5"><Row icon="person" tint="#E1EAF4" fg="#3F6696" title={t("diary_card")} sub={t("diary_card_sub")} onClick={() => { track("diary_open"); nav.push({ s: "save", diary: true }); }} /></Group>
+      )}
+
+      {notifyCard && (
+        <div className="card mt-2.5 flex items-center gap-3 !rounded-[1.1rem] py-3 pe-2 ps-4">
+          <Icon name="bell" size={20} className="text-brass" />
+          <button onClick={() => nav.push({ s: "notify" })} className="tap min-w-0 flex-1 text-start"><b className="block text-[.98rem] font-semibold">{t("notify_card")}</b><span className="block text-[.84rem] text-soft">{t("notify_card_sub")}</span></button>
+          <button onClick={() => { setNoNotify(true); store("meora_notify_card", "1"); }} aria-label={t("close")} className="tap grid h-9 w-9 place-items-center text-soft"><Icon name="close" size={18} /></button>
+        </div>
+      )}
+
+      {alone && !empty && requests.length === 0 && family?.kind !== "me" && (
         <Group className="mt-4"><Row icon="users" tint="#E4E8F2" fg="#1D2742" title={t("invite_member")} sub={t("invite_nudge")} onClick={() => { track("invite_nudge"); nav.tab({ s: "family" }); }} /></Group>
       )}
 
@@ -143,4 +194,22 @@ export function Home() {
       <div className="h-8" />
     </main>
   );
+}
+
+const read = (k: string) => { try { return localStorage.getItem(k) ?? ""; } catch { return ""; } };
+const store = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* private mode */ } };
+
+/** One memory a day from the past: the same day in an earlier year if there is one, otherwise an older note. */
+function pickMemory(list: Rec<NoteData>[], now: Date): { n: Rec<NoteData>; when: string } | null {
+  const old = list.filter((n) => n.data.createdAt < now.getTime() - 7 * 86400e3).sort((a, b) => a.data.createdAt - b.data.createdAt);
+  if (!old.length) return null;
+  const md = (d: Date) => `${d.getMonth()}-${d.getDate()}`;
+  const same = old.filter((n) => md(new Date(n.data.createdAt)) === md(now) && new Date(n.data.createdAt).getFullYear() < now.getFullYear());
+  const day = Math.floor(now.getTime() / 86400e3);
+  const n = same.length ? same[day % same.length] : old[day % old.length];
+  const days = Math.floor((now.getTime() - n.data.createdAt) / 86400e3);
+  const years = now.getFullYear() - new Date(n.data.createdAt).getFullYear();
+  const when = same.includes(n) ? (years === 1 ? t("ago_year") : t("ago_years", { n: years }))
+    : days < 14 ? t("ago_days", { n: days }) : days < 60 ? t("ago_weeks", { n: Math.floor(days / 7) }) : days < 365 ? t("ago_months", { n: Math.floor(days / 30) }) : t("ago_years", { n: Math.floor(days / 365) });
+  return { n, when };
 }

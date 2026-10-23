@@ -3,13 +3,15 @@ import { Icon } from "./ui";
 import { t } from "./i18n";
 import { nav, type Route } from "./nav";
 import { useApp } from "./store";
+import { spaceTab } from "./screens/Families";
 
 /** Always-visible tabs at the bottom, like every phone app: Home · Ask · Save · Family · More. */
 export function BottomNav({ at }: { at: Route["s"] }) {
   const requests = useApp((s) => s.family?.requests.length ?? 0);
+  const kind = useApp((s) => s.family?.kind);
   const openQs = useApp((s) => Object.values(s.questions).filter((q) => !q.data.answer && q.data.by !== s.me?.id).length);
   const tab = (s: Route["s"], icon: string, label: string, badge = 0) => {
-    const on = at === s || (s === "more" && ["more", "settings", "lang", "privacy", "questions", "news", "recovery", "emergency"].includes(at)) || (s === "home" && ["topic", "topics", "note"].includes(at)) || (s === "family" && at === "families");
+    const on = at === s || (s === "more" && ["more", "settings", "lang", "privacy", "questions", "news", "recovery", "emergency", "notify"].includes(at)) || (s === "home" && ["topic", "topics", "note"].includes(at)) || (s === "family" && at === "families");
     return (
       <button onClick={() => nav.tab({ s } as Route)} aria-current={on ? "page" : undefined} aria-label={label}
         className={`tap relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[.72rem] font-semibold ${on ? "text-ink" : "text-soft"}`}>
@@ -29,7 +31,7 @@ export function BottomNav({ at }: { at: Route["s"] }) {
           <span className="-mt-5 grid h-[3.6rem] w-[3.6rem] place-items-center rounded-full bg-navy text-paper shadow-[0_10px_24px_-10px_rgb(19_26_48/.8)] ring-4 ring-paper"><Icon name="mic" size={26} /></span>
           {t("save")}
         </button>
-        {tab("family", "users", t("family"), requests)}
+        {tab("family", kind === "me" ? "person" : "users", spaceTab(kind), requests)}
         {tab("more", "dots", t("tab_more"), openQs)}
       </div>
     </nav>

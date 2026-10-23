@@ -2,6 +2,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Btn, Confirm, Icon, Logo, Page, Spinner, Wordmark, toast } from "../ui";
 import { t, LANGS, MORE_SPEECH } from "../i18n";
+import type { SpaceKind } from "@/lib/types";
 import { afterRecovery, ApiError, backToApp, cancelJoin, getState, go, requestJoin, saveSettings, setLock, startFamily, unlockBio, unlockPics, useApp, useRecovery, SPEECH_DEFAULT, type UiLang } from "../store";
 import { JOIN_PICTURES, PICTURES, RECOVERY_LENGTH } from "@/lib/pictures";
 import { canListen, listen } from "@/lib/speech";
@@ -46,13 +47,14 @@ export function LangScreen({ onDone }: { onDone?: () => void }) {
   );
 }
 
-type Step = "intro" | "home" | "start" | "join" | "joinName" | "scan" | "recover" | "recoverName";
+type Step = "intro" | "home" | "kind" | "start" | "join" | "joinName" | "scan" | "recover" | "recoverName";
 export function Welcome() {
   const [step, setStep] = useState<Step>(() => {
     if (typeof location !== "undefined" && new URLSearchParams(location.search).get("join")) return "joinName";
     const st = getState();
     return st.welcomeStep ?? (st.fams.length ? "home" : "intro");
   });
+  const [kind, setKind] = useState<SpaceKind>("family");
   const [code, setCode] = useState<number[]>([]);
   const [rec, setRec] = useState<number[]>([]);
   const [busy, setBusy] = useState(false);
@@ -68,7 +70,24 @@ export function Welcome() {
     finally { setBusy(false); }
   };
 
-  if (step === "start") return <NameStep title={t("your_name")} busy={busy} err={err} onBack={() => setStep("home")} onDone={(n) => run(async () => { await startFamily(n); track("family_started"); })} />;
+  if (step === "start") return <NameStep title={t("your_name")} busy={busy} err={err} onBack={() => setStep("kind")} onDone={(n) => run(async () => { await startFamily(n, kind); track("family_started"); track("space:" + kind); })} />;
+  if (step === "kind") return (
+    <Dark>
+      <h1 className="mt-10 text-center text-[1.73rem] font-medium leading-[1.25] tracking-[-.01em]">{t("space_title")}</h1>
+      <p className="mt-2 text-center text-[1rem] text-[#F3F1EC]/60">{t("space_sub")}</p>
+      <div className="mt-8 grid gap-3">
+        {([["family", "home", "#C48E7E"], ["friends", "users", "#8FAE8D"], ["me", "person", "#7F96C2"]] as const).map(([k, icon, c]) => (
+          <button key={k} onClick={() => { setKind(k); track("tap_kind:" + k); setStep("start"); }}
+            className="tap flex w-full items-center gap-3.5 rounded-[1.25rem] border border-white/15 bg-white/5 p-[1.05rem] text-start">
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-[.95rem] text-[#1D2742]" style={{ background: c }}><Icon name={icon} size={22} /></span>
+            <span className="min-w-0 flex-1"><b className="block text-[1.1rem] font-semibold">{t("k_" + k)}</b><span className="mt-0.5 block text-[.9rem] leading-[1.45] opacity-70">{t("k_" + k + "_sub")}</span></span>
+            <Icon name="chev" size={18} className="shrink-0 rtl:rotate-180" />
+          </button>
+        ))}
+      </div>
+      <button onClick={() => setStep("home")} className="tap mx-auto mt-auto block px-3 py-3 text-[.95rem] font-semibold text-[#F3F1EC]/80">{t("back")}</button>
+    </Dark>
+  );
   if (step === "joinName") return <NameStep title={t("your_name")} busy={busy} err={err} onBack={() => { setErr(""); setStep(link ? "home" : "join"); }}
     onDone={(n) => run(async () => { await requestJoin(link ? { link } : { code }, n); track(link ? "join_request:qr" : "join_request:pics"); })} />;
   if (step === "recoverName") return <NameStep title={t("your_name")} busy={busy} err={err} onBack={() => setStep("recover")} onDone={(n) => run(async () => { await useRecovery(rec, n); track("recovery_used"); })} />;
@@ -157,8 +176,8 @@ export function Welcome() {
       <p className="mt-2 text-center text-[1rem] text-[#F3F1EC]/60">{t("begin_sub")}</p>
       <div className="mt-8 grid gap-3">
         {err && <p className="text-center font-semibold text-[#F0A79F]" role="alert">{err}</p>}
-        <Choice primary icon="plus" title={t("start_family")} sub={t("begin_start_sub")} onClick={() => { track("tap_start"); setStep("start"); }} />
-        <Choice icon="users" title={t("join_family")} sub={t("begin_join_sub")} onClick={() => { track("tap_join"); setStep("join"); }} />
+        <Choice primary icon="plus" title={t("start_space")} sub={t("begin_space_sub")} onClick={() => { track("tap_start"); setStep("kind"); }} />
+        <Choice icon="users" title={t("join_invite")} sub={t("join_invite_sub")} onClick={() => { track("tap_join"); setStep("join"); }} />
       </div>
       <div className="mt-auto pt-8">
         {fams.length === 0 && <Dots at={1} />}

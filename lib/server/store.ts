@@ -12,6 +12,7 @@ interface Backend {
   insert<T>(key: string, data: T): Promise<boolean>;            // false if it exists
   update<T>(key: string, data: T, v: number): Promise<boolean>; // optimistic lock
   remove(key: string): Promise<void>;
+  list<T>(prefix: string): Promise<{ key: string; data: T; v: number }[]>;
   putItem(fam: string, item: WireItem): Promise<void>;
   getItem(fam: string, id: string): Promise<WireItem | null>;
   items(fam: string, since: number): Promise<WireItem[]>;
@@ -45,9 +46,16 @@ const blobFile = (f: string, id: string) => path.join(DIR, "blobs", safe(f), saf
 
 const files: Backend = {
   get: (k) => readJson(docFile(k)),
-  insert: (k, data) => serial("d" + k, async () => { if (await readJson(docFile(k))) return false; await writeJson(docFile(k), { data, v: 1 }); return true; }),
-  update: (k, data, v) => serial("d" + k, async () => { const c = await readJson<{ v: number }>(docFile(k)); if (!c || c.v !== v) return false; await writeJson(docFile(k), { data, v: v + 1 }); return true; }),
+  insert: (k, data) => serial("d" + k, async () => { if (await readJson(docFile(k))) return false; await writeJson(docFile(k), { data, v: 1, key: k }); return true; }),
+  update: (k, data, v) => serial("d" + k, async () => { const c = await readJson<{ v: number }>(docFile(k)); if (!c || c.v !== v) return false; await writeJson(docFile(k), { data, v: v + 1, key: k }); return true; }),
   remove: async (k) => { await fs.rm(docFile(k), { force: true }); },
+  list: async <T,>(prefix: string) => {
+    const dir = path.join(DIR, "docs"), p = safe(prefix);
+    const names = (await fs.readdir(dir).catch(() => [] as string[])).filter((n) => n.startsWith(p) && n.endsWith(".json"));
+    const out: { key: string; data: T; v: number }[] = [];
+    for (const n of names) { const r = await readJson<{ data: T; v: number; key?: string }>(path.join(dir, n)); if (r) out.push({ key: r.key ?? n.slice(0, -5), data: r.data, v: r.v }); }
+    return out;
+  },
   putItem: (fam, item) => serial("i" + fam, async () => {
     const all = (await readJson<Record<string, WireItem>>(itemFile(fam))) ?? {};
     all[item.id] = item; await writeJson(itemFile(fam), all);
@@ -91,6 +99,7 @@ export function pg(source: string | Sql): Backend {
     async insert(k, data) { await init(); const r = await sql`INSERT INTO mf_docs (key, data) VALUES (${k}, ${JSON.stringify(data)}::jsonb) ON CONFLICT DO NOTHING RETURNING key`; return (r as unknown[]).length > 0; },
     async update(k, data, v) { await init(); const r = await sql`UPDATE mf_docs SET data = ${JSON.stringify(data)}::jsonb, v = v + 1 WHERE key = ${k} AND v = ${v} RETURNING key`; return (r as unknown[]).length > 0; },
     async remove(k) { await init(); await sql`DELETE FROM mf_docs WHERE key = ${k}`; },
+    async list(prefix) { await init(); const r = (await sql`SELECT key, data, v FROM mf_docs WHERE key LIKE ${prefix.replace(/[%_\\]/g, (c) => "\\" + c) + "%"}`) as { key: string; data: never; v: number }[]; return r; },
     async putItem(fam, item) { await init(); await sql`INSERT INTO mf_items (fam, id, data, updated) VALUES (${fam}, ${item.id}, ${JSON.stringify(item)}::jsonb, ${item.updated}) ON CONFLICT (fam, id) DO UPDATE SET data = EXCLUDED.data, updated = EXCLUDED.updated`; },
     async getItem(fam, id) { await init(); const r = (await sql`SELECT data FROM mf_items WHERE fam = ${fam} AND id = ${id}`) as { data: WireItem }[]; return r[0]?.data ?? null; },
     async items(fam, since) { await init(); const r = (await sql`SELECT data FROM mf_items WHERE fam = ${fam} AND updated > ${since}`) as { data: WireItem }[]; return r.map((x) => x.data); },
